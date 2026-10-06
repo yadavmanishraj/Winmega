@@ -33,6 +33,12 @@
          loop, not at release. IRON RULE: fix IL/CsWinRT warnings —
          never suppress them. -->
     <PublishAot>true</PublishAot>
+    <!-- Required by CsWinRT analyzer CsWinRT1030 (surfaced in the first
+         verified laptop build, 2026-10-07): the DI ServiceProvider type
+         implements generic WinRT interfaces whose generated code uses
+         unsafe blocks for trimming/AOT compatibility. This is the
+         analyzer's prescribed project update, not a suppression. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
     <TrimmerSingleWarn>false</TrimmerSingleWarn>
     <CsWinRTAotWarningLevel>2</CsWinRTAotWarningLevel>
