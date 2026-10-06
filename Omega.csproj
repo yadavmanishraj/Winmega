@@ -1,17 +1,33 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <!-- Upgraded 2026-10-07 from the VS template defaults
+         (net8.0-windows10.0.19041.0): .NET 10 + Windows SDK 26100,
+         matching the verified Omega.Core (plain net10.0) and the
+         Omega Windows design (WINDOWS_APP_DESIGN.md §2.1). -->
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>Omega</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Platforms>x86;x64;ARM64</Platforms>
-    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- x64 / ARM64 only — never AnyCPU, no x86 (design §2.1). -->
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <PublishProfile>win-$(Platform).pubxml</PublishProfile>
     <UseWinUI>true</UseWinUI>
     <WinUISDKReferences>false</WinUISDKReferences>
     <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
+
+    <!-- Native AOT: persistent project intent (HARD REQUIREMENT,
+         design §3.1). PublishAot=true also turns trim/AOT analysis ON
+         during development builds, so violations surface in the inner
+         loop, not at release. IRON RULE: fix IL/CsWinRT warnings —
+         never suppress them. -->
+    <PublishAot>true</PublishAot>
+    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <CsWinRTAotWarningLevel>2</CsWinRTAotWarningLevel>
+    <!-- CsWinRTAotOptimizerEnabled defaults to True (Auto) — do not turn it off. -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -50,11 +66,8 @@
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
 
-  <!-- Publish Properties -->
-  <PropertyGroup>
-    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
-    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
-  </PropertyGroup>
+  <!-- NOTE: the template's PublishReadyToRun / conditioned PublishTrimmed
+       block was removed in the .NET 10 upgrade: ReadyToRun is a JIT-only
+       optimization and conflicts with the Native AOT intent above, and
+       PublishAot already carries trimming into publish. -->
 </Project>
