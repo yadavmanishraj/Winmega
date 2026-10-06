@@ -1,0 +1,85 @@
+using System.Text.Json.Serialization;
+
+namespace Omega.Core.Upstream.Dtos;
+
+// Artist page (artist.getArtistPageDetails, UPSTREAM_SPEC §4.8).
+// Only the fields the app maps are declared; everything else is ignored.
+
+public sealed class RawArtistUrlsDto
+{
+    [JsonPropertyName("overview")] public string? Overview { get; set; }
+    [JsonPropertyName("songs")] public string? Songs { get; set; }
+    [JsonPropertyName("albums")] public string? Albums { get; set; }
+}
+
+public sealed class RawSimilarArtistDto
+{
+    [JsonPropertyName("id")] public string? Id { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("perma_url")] public string? PermaUrl { get; set; }
+
+    // Note: similar artists use image_url, not image.
+    [JsonPropertyName("image_url")] public string? ImageUrl { get; set; }
+    [JsonPropertyName("type")] public string? Type { get; set; }
+}
+
+public sealed class RawArtistPageDto
+{
+    // Both artistId and id are present upstream; mapper prefers artistId.
+    [JsonPropertyName("artistId")] public string? ArtistId { get; set; }
+    [JsonPropertyName("id")] public string? Id { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("subtitle")] public string? Subtitle { get; set; }
+    [JsonPropertyName("image")] public string? Image { get; set; }
+    [JsonPropertyName("perma_url")] public string? PermaUrl { get; set; }
+    [JsonPropertyName("follower_count")] public string? FollowerCount { get; set; }
+    [JsonPropertyName("fan_count")] public string? FanCount { get; set; }
+    [JsonPropertyName("type")] public string? Type { get; set; }
+
+    [JsonPropertyName("isVerified")]
+    [JsonConverter(typeof(FlexibleBoolConverter))]
+    public bool IsVerified { get; set; }
+
+    [JsonPropertyName("dominantLanguage")] public string? DominantLanguage { get; set; }
+    [JsonPropertyName("dominantType")] public string? DominantType { get; set; }
+
+    // A JSON-encoded string (array of {text, title, sequence}) — parsed
+    // defensively in the mapper; a malformed bio must not kill the page.
+    [JsonPropertyName("bio")] public string? Bio { get; set; }
+    [JsonPropertyName("dob")] public string? Dob { get; set; }
+    [JsonPropertyName("urls")] public RawArtistUrlsDto? Urls { get; set; }
+    [JsonPropertyName("topSongs")] public List<RawSongDto> TopSongs { get; set; } = new();
+    [JsonPropertyName("topAlbums")] public List<RawAlbumDto> TopAlbums { get; set; } = new();
+    [JsonPropertyName("singles")] public List<RawSongDto> Singles { get; set; } = new();
+    [JsonPropertyName("similarArtists")] public List<RawSimilarArtistDto> SimilarArtists { get; set; } = new();
+}
+
+/// <summary>Response of <c>artist.getArtistMoreSong</c>.</summary>
+public sealed class RawArtistSongsDto
+{
+    [JsonPropertyName("topSongs")] public RawArtistSongsPageDto? TopSongs { get; set; }
+}
+
+public sealed class RawArtistSongsPageDto
+{
+    [JsonPropertyName("songs")] public List<RawSongDto> Songs { get; set; } = new();
+
+    [JsonPropertyName("total")]
+    [JsonConverter(typeof(FlexibleInt32Converter))]
+    public int Total { get; set; }
+}
+
+/// <summary>Response of <c>artist.getArtistMoreAlbum</c>.</summary>
+public sealed class RawArtistAlbumsDto
+{
+    [JsonPropertyName("topAlbums")] public RawArtistAlbumsPageDto? TopAlbums { get; set; }
+}
+
+public sealed class RawArtistAlbumsPageDto
+{
+    [JsonPropertyName("albums")] public List<RawAlbumDto> Albums { get; set; } = new();
+
+    [JsonPropertyName("total")]
+    [JsonConverter(typeof(FlexibleInt32Converter))]
+    public int Total { get; set; }
+}

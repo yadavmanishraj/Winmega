@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Plain net10.0 like Core: these tests run on any OS.
+         Ported from yadavmanishraj/omega-winui on 2026-10-07 (18 tests,
+         all passing there on .NET 10.0.12). Versions are inline —
+         Winmega does not use central package management; the pins are
+         the same ones verified in omega-winui. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Omega.Core.Tests</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Omega.Core\Omega.Core.csproj" />
+  </ItemGroup>
+
+</Project>

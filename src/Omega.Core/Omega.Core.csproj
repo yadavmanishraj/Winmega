@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- PLAIN net10.0 — no Windows TFM (design §2.2/§2.4): everything here
+         is cross-platform BCL, so the whole data layer is unit-testable on
+         any OS and carries no WinRT surface into AOT analysis.
+         Ported from yadavmanishraj/omega-winui (OmegaWinUI.Core) on
+         2026-10-07; code identical except the Omega.Core namespace.
+         Nullable/ImplicitUsings/LangVersion are set here explicitly —
+         in omega-winui they came from a Directory.Build.props, which
+         Winmega does not use. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Omega.Core</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <!-- Native AOT / trimming readiness is a hard requirement for this project.
+         Analyzers run in every build so violations surface immediately, not at publish time. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+  </PropertyGroup>
+
+  <!-- No package dependencies: System.Text.Json (source-generated) and
+       System.Security.Cryptography ship in the .NET 10 shared framework. -->
+
+</Project>

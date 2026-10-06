@@ -8,4 +8,12 @@
     <Platform Solution="*|x64" Project="x64" />
     <Deploy />
   </Project>
+  <Project Path="src/Omega.Core/Omega.Core.csproj">
+    <Platform Solution="*|ARM64" Project="Any CPU" />
+    <Platform Solution="*|x64" Project="Any CPU" />
+  </Project>
+  <Project Path="tests/Omega.Core.Tests/Omega.Core.Tests.csproj">
+    <Platform Solution="*|ARM64" Project="Any CPU" />
+    <Platform Solution="*|x64" Project="Any CPU" />
+  </Project>
 </Solution>
