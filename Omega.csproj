@@ -17,6 +17,15 @@
     <WinUISDKReferences>false</WinUISDKReferences>
     <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
+    <!-- This app project sits at the REPO ROOT with the Core and test
+         projects in subfolders beneath it (src/, tests/). The SDK's
+         default item globbing (**/*.cs etc. under the project folder)
+         would otherwise swallow those projects' sources into the app
+         compile — duplicate types vs the referenced Omega.Core
+         assembly, the tests' AssemblyInfo duplicates, missing xunit.
+         Verified the hard way on the dev laptop, 2026-10-07: exclude
+         both subtrees from ALL default items of this project. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);src/**;tests/**</DefaultItemExcludes>
 
     <!-- Native AOT: persistent project intent (HARD REQUIREMENT,
          design §3.1). PublishAot=true also turns trim/AOT analysis ON
