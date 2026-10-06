@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Omega (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Omega (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
