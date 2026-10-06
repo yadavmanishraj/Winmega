@@ -1,1 +1,64 @@
+# Visual Studio / .NET — standard ignores for Winmega (WinUI 3)
+# The template shipped only ".vs/", which let obj/ build output and
+# Omega.csproj.user get committed. Never track build output or user files.
+
+## VS / user-specific
 .vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Build output
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## MSIX / packaging output
+AppPackages/
+BundleArtifacts/
+*.msix
+*.msixupload
+*.appx
+*.appxupload
+*.appxbundle
+*.msixbundle
+# Signing material — NEVER commit certificates or passwords
+*.pfx
+*.p12
+*.cer
+
+## Test / coverage
+[Tt]est[Rr]esult*/
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+
+## Misc
+*.log
+*.tmp
+*.cache
+.DS_Store
+Thumbs.db
