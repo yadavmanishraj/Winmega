@@ -1,50 +1,44 @@
-﻿using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.ApplicationModel;
-using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml;
+using Omega.Core.Upstream;
+using Omega.ViewModels;
 
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+namespace Omega;
 
-namespace Omega
+/// <summary>
+/// Application entry point and composition root (design §3.3):
+/// explicit service registrations only — no assembly scanning, no
+/// open generics, no runtime service location scattered in pages.
+/// </summary>
+public partial class App : Application
 {
-    /// <summary>
-    /// Provides application-specific behavior to supplement the default Application class.
-    /// </summary>
-    public partial class App : Application
+    private Window? _window;
+
+    public App()
     {
-        private Window? _window;
+        InitializeComponent();
+        // Dark-first product theme (design §10); runtime switching lands
+        // with the Settings page and applies to the root element.
+        RequestedTheme = ApplicationTheme.Dark;
+        Services = BuildServices();
+    }
 
-        /// <summary>
-        /// Initializes the singleton application object.  This is the first line of authored code
-        /// executed, and as such is the logical equivalent of main() or WinMain().
-        /// </summary>
-        public App()
-        {
-            InitializeComponent();
-        }
+    /// <summary>The single, explicitly-built service provider.</summary>
+    public IServiceProvider Services { get; }
 
-        /// <summary>
-        /// Invoked when the application is launched.
-        /// </summary>
-        /// <param name="args">Details about the launch request and process.</param>
-        protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
-        {
-            _window = new MainWindow();
-            _window.Activate();
-        }
+    private static IServiceProvider BuildServices()
+    {
+        var services = new ServiceCollection();
+        // One singleton client (one HttpClient) for all upstream calls.
+        services.AddSingleton(_ => new JioSaavnClient());
+        services.AddTransient<ShellViewModel>();
+        return services.BuildServiceProvider();
+    }
+
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    {
+        _window = new MainWindow();
+        _window.Activate();
     }
 }

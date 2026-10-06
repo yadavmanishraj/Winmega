@@ -1,19 +1,121 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Window
     x:Class="Omega.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:Omega"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d"
     Title="Omega">
 
+    <!-- Mica backdrop (design §9.1): first-party media apps differentiate
+         via backdrop + accent. -->
     <Window.SystemBackdrop>
-        <MicaBackdrop />
+        <MicaBackdrop Kind="Base" />
     </Window.SystemBackdrop>
 
+    <!-- Shell (design §9.1): hero Grid + floating commands — deliberately
+         NO NavigationView. Omega has four peer destinations with no
+         hierarchy; the sanctioned switcher is a SelectorBar in a slim
+         command strip, content is a Frame, and the Now Playing bar
+         floats over the content. -->
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
+        <!-- Command strip -->
+        <Grid Grid.Row="0" Padding="16,10" ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <SymbolIcon Symbol="MusicInfo" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                <TextBlock x:Uid="AppWordmark" Style="{ThemeResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <SelectorBar x:Name="DestinationBar"
+                         Grid.Column="1"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         AutomationProperties.AutomationId="DestinationBar"
+                         SelectionChanged="DestinationBar_SelectionChanged">
+                <SelectorBarItem x:Uid="NavHome" Tag="home" IsSelected="True"
+                                 AutomationProperties.AutomationId="NavHome">
+                    <SelectorBarItem.Icon>
+                        <SymbolIcon Symbol="Home" />
+                    </SelectorBarItem.Icon>
+                </SelectorBarItem>
+                <SelectorBarItem x:Uid="NavSearch" Tag="search"
+                                 AutomationProperties.AutomationId="NavSearch">
+                    <SelectorBarItem.Icon>
+                        <SymbolIcon Symbol="Find" />
+                    </SelectorBarItem.Icon>
+                </SelectorBarItem>
+                <SelectorBarItem x:Uid="NavLibrary" Tag="library"
+                                 AutomationProperties.AutomationId="NavLibrary">
+                    <SelectorBarItem.Icon>
+                        <SymbolIcon Symbol="Library" />
+                    </SelectorBarItem.Icon>
+                </SelectorBarItem>
+                <SelectorBarItem x:Uid="NavSettings" Tag="settings"
+                                 AutomationProperties.AutomationId="NavSettings">
+                    <SelectorBarItem.Icon>
+                        <SymbolIcon Symbol="Setting" />
+                    </SelectorBarItem.Icon>
+                </SelectorBarItem>
+            </SelectorBar>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Ellipse Width="10" Height="10" Fill="{ThemeResource SystemFillColorSuccessBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Uid="EndpointStatus" Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Page content -->
+        <Frame x:Name="ContentFrame" Grid.Row="1" />
+
+        <!-- Floating Now Playing bar: acrylic, elevated, rounded with the
+             overlay corner radius (design §9.1). Expands to the full Now
+             Playing page in a later phase. -->
+        <Border Grid.Row="1"
+                VerticalAlignment="Bottom"
+                Margin="16"
+                Padding="16,10"
+                CornerRadius="{ThemeResource OverlayCornerRadius}"
+                Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                Translation="0,0,32">
+            <Border.Shadow>
+                <ThemeShadow />
+            </Border.Shadow>
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{x:Bind ViewModel.NowPlayingTitle, Mode=OneWay}"
+                               Style="{ThemeResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind ViewModel.NowPlayingSubtitle, Mode=OneWay}"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.75"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <Button x:Name="PlayPauseButton"
+                        Grid.Column="1"
+                        Width="40" Height="40" Padding="0"
+                        CornerRadius="20"
+                        VerticalAlignment="Center"
+                        Background="{ThemeResource AccentFillColorDefaultBrush}"
+                        AutomationProperties.AutomationId="NowPlayingPlayPause"
+                        AutomationProperties.Name="Play or pause"
+                        Click="PlayPauseButton_Click">
+                    <SymbolIcon Symbol="Play" />
+                </Button>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

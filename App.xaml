@@ -1,16 +1,52 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Application
     x:Class="Omega.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:Omega">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
-                <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
-            <!-- Other app resources here -->
+
+            <!-- Theming (design §10): explicit Light / Dark / HighContrast
+                 dictionaries — never "Default". Usage sites bind with
+                 {ThemeResource} so theme switches live-update. The play-
+                 green accent (#3BE477 family) overrides SystemAccentColor
+                 app-wide — the on-pattern way first-party apps
+                 differentiate — while Mica supplies the window backdrop.
+                 HighContrast contains ONLY SystemColor* resources. -->
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="SystemAccentColor">#3BE477</Color>
+                    <Color x:Key="SystemAccentColorLight1">#65E995</Color>
+                    <Color x:Key="SystemAccentColorLight2">#8FF0B0</Color>
+                    <Color x:Key="SystemAccentColorLight3">#C4F9D8</Color>
+                    <Color x:Key="SystemAccentColorDark1">#2FBC5E</Color>
+                    <Color x:Key="SystemAccentColorDark2">#249A4B</Color>
+                    <Color x:Key="SystemAccentColorDark3">#1B7539</Color>
+                    <!-- Purpose-named brushes (never named by hue). -->
+                    <SolidColorBrush x:Key="HeroSurfaceBrush" Color="#12122B" />
+                    <SolidColorBrush x:Key="HeroTintBrush" Color="#1E1B4B" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="SystemAccentColor">#2DBE62</Color>
+                    <Color x:Key="SystemAccentColorLight1">#3BE477</Color>
+                    <Color x:Key="SystemAccentColorLight2">#7FECA6</Color>
+                    <Color x:Key="SystemAccentColorLight3">#C4F9D8</Color>
+                    <Color x:Key="SystemAccentColorDark1">#1FA855</Color>
+                    <Color x:Key="SystemAccentColorDark2">#178541</Color>
+                    <Color x:Key="SystemAccentColorDark3">#106332</Color>
+                    <SolidColorBrush x:Key="HeroSurfaceBrush" Color="#ECECF7" />
+                    <SolidColorBrush x:Key="HeroTintBrush" Color="#D9D4F5" />
+                </ResourceDictionary>
+                <!-- HighContrast: intentionally empty for now (design
+                     §10) — the platform's SystemColor* brushes already
+                     carry the built-in controls, and the custom brushes
+                     above fall back to the active Light/Dark values. If
+                     HC-specific overrides are ever added here, they must
+                     be SystemColor*Brush resources only, no opacity. -->
+                <ResourceDictionary x:Key="HighContrast" />
+            </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

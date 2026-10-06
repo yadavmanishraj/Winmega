@@ -1,0 +1,21 @@
+<Page
+    x:Class="Omega.Views.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Phase 0/1 placeholder. The real Home (design §9.2) hangs browse-
+         module sections off this hero: Jump back in / Trending songs /
+         New albums / Charts / Top playlists / Browse discover. -->
+    <ScrollViewer>
+        <StackPanel Padding="24" Spacing="16">
+            <Border Background="{ThemeResource HeroSurfaceBrush}"
+                    CornerRadius="16"
+                    Padding="24">
+                <StackPanel Spacing="6">
+                    <TextBlock x:Uid="HomeTitle" Style="{ThemeResource TitleTextBlockStyle}" />
+                    <TextBlock x:Uid="HomeSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -55,6 +55,16 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+    <!-- Shell dependencies (ported from omega-winui, verified pins):
+         MVVM Toolkit >= 8.4 for partial-property [ObservableProperty]
+         (the AOT-safe form); DI 10.0.0 for the explicit composition
+         root in App.xaml.cs — no scanning, no open generics. -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="src\Omega.Core\Omega.Core.csproj" />
   </ItemGroup>
 
   <!--

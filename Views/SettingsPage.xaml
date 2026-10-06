@@ -1,0 +1,24 @@
+<Page
+    x:Class="Omega.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Phase 0/1 placeholder. The real Settings (design §9.6) groups
+         Appearance / Playback / Downloads / Advanced (endpoint override)
+         / About in SettingsCard-style rows. -->
+    <StackPanel Padding="24" Spacing="16">
+        <TextBlock x:Uid="SettingsTitle" Style="{ThemeResource TitleTextBlockStyle}" />
+        <TextBlock x:Uid="SettingsSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+            <Border Width="48" Height="48" CornerRadius="8"
+                    Background="{ThemeResource AccentFillColorDefaultBrush}" />
+            <TextBlock x:Uid="AccentSwatchLabel"
+                       Style="{ThemeResource BodyTextBlockStyle}"
+                       VerticalAlignment="Center" />
+        </StackPanel>
+        <TextBlock x:Uid="SettingsEndpointNote"
+                   Style="{ThemeResource CaptionTextBlockStyle}"
+                   Opacity="0.75"
+                   TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left" />
+    </StackPanel>
+</Page>

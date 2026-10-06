@@ -49,5 +49,11 @@
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
     <systemai:Capability Name="systemAIModels"/>
+    <!-- Added 2026-10-07 with the Core port: a packaged app gets NO
+         outbound internet without this capability, and every Omega
+         feature talks to www.jiosaavn.com. Least-privilege trimming
+         of the template's runFullTrust / systemAIModels (unused by
+         this app) is a separate, deliberate step. -->
+    <Capability Name="internetClient" />
   </Capabilities>
 </Package>

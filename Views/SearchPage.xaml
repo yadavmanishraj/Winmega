@@ -1,0 +1,19 @@
+<Page
+    x:Class="Omega.Views.SearchPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Phase 0/1 placeholder. The real Search (design §9.3) adds a
+         SelectorBar over Songs/Albums/Artists/Playlists result regions
+         with incremental paging. -->
+    <StackPanel Padding="24" Spacing="16">
+        <TextBlock x:Uid="SearchTitle" Style="{ThemeResource TitleTextBlockStyle}" />
+        <TextBlock x:Uid="SearchSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
+        <AutoSuggestBox x:Uid="SearchBox"
+                        x:Name="SearchBox"
+                        MaxWidth="520"
+                        HorizontalAlignment="Left"
+                        QueryIcon="Find"
+                        AutomationProperties.AutomationId="SearchBox" />
+    </StackPanel>
+</Page>

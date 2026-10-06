@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Microsoft ResX Schema. UI strings live here (design §10: x:Uid +
+    Resources.resw, never hard-coded UI strings).
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="AppWordmark.Text" xml:space="preserve">
+    <value>Omega</value>
+  </data>
+  <data name="NavHome.Text" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="NavSearch.Text" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="NavLibrary.Text" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="NavSettings.Text" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="EndpointStatus.Text" xml:space="preserve">
+    <value>Direct · JioSaavn</value>
+  </data>
+  <data name="HomeTitle.Text" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="HomeSubtitle.Text" xml:space="preserve">
+    <value>Trending, new albums, charts and playlists — no account, just music.</value>
+  </data>
+  <data name="SearchTitle.Text" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="SearchSubtitle.Text" xml:space="preserve">
+    <value>Songs, albums, artists and playlists.</value>
+  </data>
+  <data name="SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search songs, albums, artists…</value>
+  </data>
+  <data name="LibraryTitle.Text" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="LibrarySubtitle.Text" xml:space="preserve">
+    <value>Favourites, downloads, history and your playlists live here — on this PC only.</value>
+  </data>
+  <data name="SettingsTitle.Text" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsSubtitle.Text" xml:space="preserve">
+    <value>Appearance, playback, downloads and advanced options.</value>
+  </data>
+  <data name="AccentSwatchLabel.Text" xml:space="preserve">
+    <value>Play-green accent #3BE477</value>
+  </data>
+  <data name="SettingsEndpointNote.Text" xml:space="preserve">
+    <value>API endpoint: https://www.jiosaavn.com/api.php — direct upstream. The advanced override field lands with the full Settings implementation.</value>
+  </data>
+</root>
