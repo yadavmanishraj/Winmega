@@ -139,7 +139,11 @@
                     <Button x:Uid="RetryButton" Command="{x:Bind ViewModel.RetrySearchCommand}"
                             AutomationProperties.AutomationId="SearchSectionRetryTop" />
                 </StackPanel>
-                <ListView ItemsSource="{x:Bind ViewModel.TopResults, Mode=OneWay}"
+                <!-- FilteredTopResults is the page's own mirror of
+                     ViewModel.TopResults minus DisplayOnly rows
+                     (SearchPage.xaml.cs) — the Top tab never renders
+                     an inert row. -->
+                <ListView ItemsSource="{x:Bind FilteredTopResults, Mode=OneWay}"
                           ItemTemplate="{StaticResource TopResultRowTemplate}"
                           ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                           SelectionMode="None" IsItemClickEnabled="True"

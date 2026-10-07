@@ -1,4 +1,7 @@
 using System;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -30,6 +33,21 @@ public sealed partial class SearchPage : Page
 
     public SearchViewModel ViewModel { get; }
 
+    private bool _topResultsHooked;
+
+    /// <summary>
+    /// The Top tab's rows as actually rendered: ViewModel.TopResults
+    /// minus DisplayOnly items (channels, shows — kinds with no
+    /// detail page and no playback). SearchViewModel already drops
+    /// them when composing TopResults; this page-level mirror
+    /// enforces the same rule at the rendering surface
+    /// (DETAIL_PAGE_DESIGN §2: the Top tab must never render an
+    /// inert row), so the guarantee survives any future composition
+    /// change. The typed tabs bind their own collections and are
+    /// unaffected.
+    /// </summary>
+    public ObservableCollection<SearchResultItemViewModel> FilteredTopResults { get; } = new();
+
     /// <summary>
     /// Sidebar-search handoff: a non-empty string parameter runs the
     /// search on the Top tab (the exact path the page's own submit
@@ -40,6 +58,7 @@ public sealed partial class SearchPage : Page
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        HookTopResults();
         if (e.Parameter is string query && !string.IsNullOrWhiteSpace(query))
         {
             TabTop.IsSelected = true;
@@ -50,8 +69,90 @@ public sealed partial class SearchPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
+        UnhookTopResults();
         ViewModel.CancelLoads();
         base.OnNavigatedFrom(e);
+    }
+
+    private void HookTopResults()
+    {
+        if (_topResultsHooked)
+        {
+            return;
+        }
+
+        _topResultsHooked = true;
+        ViewModel.TopResults.CollectionChanged += TopResults_CollectionChanged;
+        RebuildFilteredTopResults();
+    }
+
+    private void UnhookTopResults()
+    {
+        if (!_topResultsHooked)
+        {
+            return;
+        }
+
+        _topResultsHooked = false;
+        ViewModel.TopResults.CollectionChanged -= TopResults_CollectionChanged;
+    }
+
+    private void RebuildFilteredTopResults()
+    {
+        FilteredTopResults.Clear();
+        foreach (SearchResultItemViewModel row in ViewModel.TopResults)
+        {
+            if (row.Kind != HomeEntityKind.DisplayOnly)
+            {
+                FilteredTopResults.Add(row);
+            }
+        }
+    }
+
+    private void TopResults_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add:
+                if (e.NewItems is not null)
+                {
+                    // The source index counts items this mirror
+                    // drops; translate it into filtered coordinates
+                    // (the count of kept rows before the insert
+                    // point) so ordering matches the source exactly.
+                    int index = ViewModel.TopResults
+                        .Take(e.NewStartingIndex)
+                        .Count(row => row.Kind != HomeEntityKind.DisplayOnly);
+                    foreach (SearchResultItemViewModel row in e.NewItems)
+                    {
+                        if (row.Kind != HomeEntityKind.DisplayOnly)
+                        {
+                            FilteredTopResults.Insert(index, row);
+                            index++;
+                        }
+                    }
+                }
+
+                break;
+
+            case NotifyCollectionChangedAction.Remove:
+                if (e.OldItems is not null)
+                {
+                    foreach (SearchResultItemViewModel row in e.OldItems)
+                    {
+                        // A dropped DisplayOnly row simply isn't
+                        // here; Remove is then a harmless no-op.
+                        FilteredTopResults.Remove(row);
+                    }
+                }
+
+                break;
+
+            default:
+                // Replace / Move / Reset (Clear): rebuild.
+                RebuildFilteredTopResults();
+                break;
+        }
     }
 
     private async void OnAddToPlaylistRequested(Song song) =>

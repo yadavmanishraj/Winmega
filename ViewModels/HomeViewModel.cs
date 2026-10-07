@@ -16,10 +16,13 @@ namespace Omega.ViewModels;
 /// <summary>
 /// Home (design §9.2): hero from the top trending entity, then browse-
 /// module sections — Jump back in (local history), Trending songs, New
-/// albums, Charts, Top playlists, Browse discover. Browse entities are
+/// albums, Charts, Top playlists. Browse entities are
 /// classified by SHAPE (<see cref="HomeEntityClassifier"/>), never by
 /// the unreliable upstream entity type. Radio/shows sections are
-/// display-only in v1 and not rendered.
+/// display-only in v1 and not rendered. The browse_discover module is
+/// deliberately NOT rendered (DETAIL_PAGE_DESIGN §2): every live item
+/// in it is an upstream "channel" — DisplayOnly, with no detail page
+/// and no play surface — so the section was a row of inert cards.
 /// </summary>
 public partial class HomeViewModel : ObservableObject
 {
@@ -48,8 +51,6 @@ public partial class HomeViewModel : ObservableObject
 
     public ObservableCollection<HomeItemViewModel> TopPlaylistItems { get; } = new();
 
-    public ObservableCollection<HomeItemViewModel> DiscoverItems { get; } = new();
-
     [ObservableProperty]
     public partial bool IsLoading { get; set; }
 
@@ -72,8 +73,6 @@ public partial class HomeViewModel : ObservableObject
     public bool HasCharts => ChartItems.Count > 0;
 
     public bool HasTopPlaylists => TopPlaylistItems.Count > 0;
-
-    public bool HasDiscover => DiscoverItems.Count > 0;
 
     /// <summary>Time-aware greeting (design §9.2 hero block).</summary>
     public string Greeting
@@ -119,7 +118,6 @@ public partial class HomeViewModel : ObservableObject
             FillEntities(NewAlbumItems, modules.NewAlbums);
             FillEntities(ChartItems, modules.Charts);
             FillEntities(TopPlaylistItems, modules.TopPlaylists);
-            FillEntities(DiscoverItems, modules.BrowseDiscover);
 
             Hero = TrendingItems.FirstOrDefault() ?? NewAlbumItems.FirstOrDefault();
             NotifySectionVisibility();
@@ -275,7 +273,6 @@ public partial class HomeViewModel : ObservableObject
         OnPropertyChanged(nameof(HasNewAlbums));
         OnPropertyChanged(nameof(HasCharts));
         OnPropertyChanged(nameof(HasTopPlaylists));
-        OnPropertyChanged(nameof(HasDiscover));
     }
 
     partial void OnErrorMessageChanged(string? value) => OnPropertyChanged(nameof(HasError));

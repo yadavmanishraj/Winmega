@@ -68,11 +68,16 @@ public sealed partial class HomePage : Page
         await PlaylistPicker.ShowAsync(XamlRoot, _store, song);
 
     // Card activation lives on the templates' root elements (the
-    // sections are ItemsRepeaters — no ItemClick). These mirror the
-    // old GridView ItemClick handlers exactly: entity/trending cards
-    // navigate to Detail when the item is navigable; song cards play.
+    // sections are ItemsRepeaters — no ItemClick). The decision
+    // table for an entity/trending card body tap: navigable items
+    // (album/playlist/artist) go to Detail; playable items with no
+    // detail page (song-shaped cards in Trending and New albums)
+    // PLAY — the same verb Search's row tap uses, and the same
+    // command the card's play disc runs; DisplayOnly items do
+    // nothing (their one full section, Discover, was removed).
     // A tap that lands on a card's own play button runs only the
-    // button's Command (Play) and never navigates.
+    // button's Command (Play) and never reaches this table, so
+    // playback never double-fires.
 
     private void EntityCard_Tapped(object sender, TappedRoutedEventArgs e)
     {
@@ -123,10 +128,29 @@ public sealed partial class HomePage : Page
 
     private void ActivateEntityCard(object sender)
     {
-        if ((sender as FrameworkElement)?.DataContext is HomeItemViewModel item && item.DetailArgs is { } args)
+        if ((sender as FrameworkElement)?.DataContext is not HomeItemViewModel item)
+        {
+            return;
+        }
+
+        if (item.DetailArgs is { } args)
         {
             Frame.Navigate(typeof(DetailPage), args);
         }
+        else if (item.IsPlayable)
+        {
+            // Song-shaped card: play it, exactly like the card's
+            // play disc (same command). EntityCard_Tapped has
+            // already excluded taps that started on the disc
+            // itself, so this cannot double-fire with the disc's
+            // own Command. Track-carrying albums never reach this
+            // branch — they carry DetailArgs and navigate; their
+            // disc is the play path.
+            item.PlayCommand.Execute(null);
+        }
+
+        // DisplayOnly items fall through deliberately: no detail
+        // page and no playback exist for them.
     }
 
     private void ActivateSongCard(object sender)
@@ -178,7 +202,6 @@ public sealed partial class HomePage : Page
             _sections.Add(new SectionScroller(NewAlbumsSection, NewAlbumsScroller, NewAlbumsScrollPrev, NewAlbumsScrollNext));
             _sections.Add(new SectionScroller(ChartsSection, ChartsScroller, ChartsScrollPrev, ChartsScrollNext));
             _sections.Add(new SectionScroller(TopPlaylistsSection, TopPlaylistsScroller, TopPlaylistsScrollPrev, TopPlaylistsScrollNext));
-            _sections.Add(new SectionScroller(DiscoverSection, DiscoverScroller, DiscoverScrollPrev, DiscoverScrollNext));
         }
 
         ApplyTier(TierForWidth(ActualWidth), force: true);
@@ -216,7 +239,6 @@ public sealed partial class HomePage : Page
         SetSectionSize(NewAlbumsScroller, NewAlbumsRepeater, entityWidth, entityHeight, entityBand);
         SetSectionSize(ChartsScroller, ChartsRepeater, entityWidth, entityHeight, entityBand);
         SetSectionSize(TopPlaylistsScroller, TopPlaylistsRepeater, entityWidth, entityHeight, entityBand);
-        SetSectionSize(DiscoverScroller, DiscoverRepeater, entityWidth, entityHeight, entityBand);
         SetSectionSize(JumpBackInScroller, JumpBackInRepeater, songWidth, songHeight, 296);
         SetSectionSize(TrendingScroller, TrendingRepeater, songWidth, songHeight, 296);
         ApplyArtworkFrameSizes();
@@ -262,7 +284,7 @@ public sealed partial class HomePage : Page
     /// pinned by EntityRepeater_ElementPrepared).</summary>
     private void ApplyArtworkFrameSizes()
     {
-        foreach (ItemsRepeater repeater in new[] { NewAlbumsRepeater, ChartsRepeater, TopPlaylistsRepeater, DiscoverRepeater })
+        foreach (ItemsRepeater repeater in new[] { NewAlbumsRepeater, ChartsRepeater, TopPlaylistsRepeater })
         {
             int count = VisualTreeHelper.GetChildrenCount(repeater);
             for (int i = 0; i < count; i++)
