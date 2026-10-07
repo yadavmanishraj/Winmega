@@ -12,13 +12,14 @@ namespace Omega.Controls;
 /// Binding host: <see cref="ViewModel"/> is a dependency property so
 /// a page-local DataTemplate can create the control and hand it the
 /// row item (<c>&lt;controls:SongRow ViewModel="{x:Bind}" /&gt;</c>).
-/// The property-changed callback forwards the item to
-/// <see cref="FrameworkElement.DataContext"/>, which is the single
-/// binding root for the control's markup: every binding in
-/// SongRow.xaml is a classic {Binding} against the item itself, and
-/// the Button.Flyout content inherits that same context. While the
-/// property is null (a recycled row before the template assigns the
-/// item) the bindings simply do not evaluate.
+/// Every binding in SongRow.xaml is a compiled
+/// <c>{x:Bind ViewModel.&lt;path&gt;, Mode=OneWay}</c> rooted at this
+/// property: the XAML compiler types the paths against
+/// <see cref="SongItemViewModel"/> (so the bindings are trimming/AOT
+/// clean — no WMC1510), and the compiled binding re-evaluates
+/// whenever this property changes, which is what makes recycled rows
+/// pick up their new item. Nothing forwards to DataContext — the
+/// markup never binds against it.
 /// </summary>
 public sealed partial class SongRow : UserControl
 {
@@ -27,7 +28,7 @@ public sealed partial class SongRow : UserControl
             nameof(ViewModel),
             typeof(SongItemViewModel),
             typeof(SongRow),
-            new PropertyMetadata(null, OnViewModelChanged));
+            new PropertyMetadata(null));
 
     public SongRow() => InitializeComponent();
 
@@ -36,7 +37,4 @@ public sealed partial class SongRow : UserControl
         get => (SongItemViewModel?)GetValue(ViewModelProperty);
         set => SetValue(ViewModelProperty, value);
     }
-
-    private static void OnViewModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
-        ((SongRow)d).DataContext = e.NewValue;
 }
