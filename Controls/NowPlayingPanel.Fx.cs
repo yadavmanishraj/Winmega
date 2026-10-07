@@ -80,6 +80,7 @@ public sealed partial class NowPlayingPanel
     private CompositionColorGradientStop[]? _blobBStops;
     private CompositionColorGradientStop[][]? _particleStops;
     private CompositionColorGradientStop[]? _glowStops;
+    private ContainerVisual? _blobLayer;
     private ContainerVisual? _particleLayer;
     private ContainerVisual? _glowContainer;
     private CompositionPropertySet? _pulseProps;
@@ -411,6 +412,11 @@ public sealed partial class NowPlayingPanel
             HeroTintBorder.Background = null;
 
             _fxReady = true;
+            if (_blobLayer is not null)
+            {
+                _blobLayer.IsVisible = !_fxCalm;
+            }
+
             if (_particleLayer is not null)
             {
                 _particleLayer.IsVisible = !_fxCalm;
@@ -487,6 +493,7 @@ public sealed partial class NowPlayingPanel
         // survives the 288–520 resize range unchanged.
         Compositor compositor = _compositor!;
         var layer = compositor.CreateContainerVisual();
+        _blobLayer = layer;
         var scale = compositor.CreateExpressionAnimation(
             "Vector3(host.Size.X / refWidth, host.Size.X / refWidth, 1f)");
         scale.SetReferenceParameter("host", hostVisual);
@@ -591,7 +598,6 @@ public sealed partial class NowPlayingPanel
             float diameter = bokeh ? 22f + ((float)random.NextDouble() * 20f) : 3f + ((float)random.NextDouble() * 3.5f);
             float peak = bokeh ? 0.16f : 0.75f;
             float x = (float)random.NextDouble() * FxReferenceWidth;
-            float y = (float)random.NextDouble() * FxReferenceHeight;
             double drift = 560 + (random.NextDouble() * 220);
             double period = 24 + (random.NextDouble() * 22);
             double sway = 6 + (random.NextDouble() * 8);
@@ -603,11 +609,22 @@ public sealed partial class NowPlayingPanel
             _fxDisposables.Add(sprite);
             _particleLayer.Children.InsertAtTop(sprite);
 
+            // The rise runs UP the panel: a sprite starts at the
+            // rise base (40 above the reference height's floor)
+            // and travels `drift` px toward the top over its
+            // period, distributed across the whole field by its
+            // phase. The original build rose from y=40 — the top
+            // edge — so the entire field lived at negative Y
+            // (above the panel, clipped) for the whole of its
+            // full-opacity window and Particles rendered nothing
+            // (rendered proof out28, 2026-10-08).
+            double riseBase = FxReferenceHeight - 40.0;
+
             // Still frame (what reduced motion and the pre-start
             // moment show): the sprite partway along its rise.
             sprite.Offset = new Vector3(
                 x + SwayAt(phase, sway, phase),
-                (float)(40 - (drift * phase)),
+                (float)(riseBase - (drift * phase)),
                 0);
             sprite.Opacity = peak * FadeAt(phase);
 
@@ -622,7 +639,7 @@ public sealed partial class NowPlayingPanel
                     (float)t,
                     new Vector3(
                         x + SwayAt(t, sway, phase),
-                        (float)(40 - (drift * t)),
+                        (float)(riseBase - (drift * t)),
                         0));
             }
 
@@ -663,9 +680,29 @@ public sealed partial class NowPlayingPanel
         _fxDisposables.Add(_glowContainer);
         ElementCompositionPreview.SetElementChildVisual(GlowHost, _glowContainer);
 
-        CompositionRadialGradientBrush brush = MakeRadialBrush(
-            WithAlpha(_fallbackPalette!.Vibrant, 150), WithAlpha(_fallbackPalette.Vibrant, 0),
-            out _glowStops);
+        // The halo is a RING, not a disc: the gradient peaks at
+        // offset 0.70 — where the artwork's edge falls inside
+        // this oversized sprite across the resize range — then
+        // fades to nothing at the sprite boundary, easing down
+        // toward the centre. The original two-stop brush peaked
+        // at the centre (alpha 150), which the opaque artwork
+        // covers completely; the only visible part, the narrow
+        // spill ring, sampled the gradient's weakest tail
+        // (alpha ≤ 26/255) and the breath modulated that by only
+        // ~Δ0.02 — a halo that measured as nothing (rendered
+        // proof out28, 2026-10-08).
+        var brush = compositor.CreateRadialGradientBrush();
+        brush.EllipseCenter = new Vector2(0.5f, 0.5f);
+        brush.EllipseRadius = new Vector2(0.5f, 0.5f);
+        Color glowColor = _fallbackPalette!.Vibrant;
+        var glowStop0 = compositor.CreateColorGradientStop(0f, WithAlpha(glowColor, 120));
+        var glowStop1 = compositor.CreateColorGradientStop(0.70f, WithAlpha(glowColor, 190));
+        var glowStop2 = compositor.CreateColorGradientStop(1f, WithAlpha(glowColor, 0));
+        brush.ColorStops.Add(glowStop0);
+        brush.ColorStops.Add(glowStop1);
+        brush.ColorStops.Add(glowStop2);
+        _glowStops = new[] { glowStop0, glowStop1, glowStop2 };
+        _fxDisposables.Add(brush);
         var sprite = compositor.CreateSpriteVisual();
         sprite.Brush = brush;
         BindSize(sprite, glowHostVisual);
@@ -810,7 +847,8 @@ public sealed partial class NowPlayingPanel
 
         if (_glowStops is not null)
         {
-            SetStops(_glowStops, WithAlpha(family.Glow, 150), WithAlpha(family.Glow, 0));
+            SetStops(_glowStops,
+                WithAlpha(family.Glow, 120), WithAlpha(family.Glow, 190), WithAlpha(family.Glow, 0));
         }
     }
 
@@ -868,6 +906,17 @@ public sealed partial class NowPlayingPanel
             return;
         }
 
+        // Idle is the quiet surface (NOW_PLAYING_FX §3): gradient
+        // at most. The blob layer hides wholesale — parked
+        // visible, its fallback-family colours are the theme's
+        // saturated accent at near-full alpha, which painted a
+        // loud green-teal wash over the idle card (rendered
+        // proof out28 s06, 2026-10-08).
+        if (_blobLayer is not null)
+        {
+            _blobLayer.IsVisible = !idle;
+        }
+
         if (_particleLayer is not null)
         {
             _particleLayer.IsVisible = !idle;
@@ -887,9 +936,10 @@ public sealed partial class NowPlayingPanel
             StartLoops();
         }
 
-        // Idle shows the fallback palette (calm, brand-neutral);
-        // leaving idle restores the song's. The swap itself is
-        // immediate — the palette path cross-fades real changes.
+        // Idle shows the fallback palette's gradient with the
+        // blob/particle/glow layers parked (above); leaving idle
+        // restores the song's colours and layers. The swap itself
+        // is immediate — the palette path cross-fades real changes.
         UpdateFxColors(animate: false);
     }
 
@@ -1000,6 +1050,7 @@ public sealed partial class NowPlayingPanel
         _fxDisposables.Clear();
         _fxRoot = null;
         _compositor = null;
+        _blobLayer = null;
         _particleLayer = null;
         _glowContainer = null;
         _pulseProps = null;
