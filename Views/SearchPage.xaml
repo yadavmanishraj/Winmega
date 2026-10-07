@@ -9,55 +9,10 @@
          no box of its own). SelectorBar tabs (Top results / Songs /
          Albums / Artists / Playlists). Each tab keeps its own
          collection in the ViewModel; the page only switches panel
-         visibility. -->
+         visibility. The song-row template is the shared one in
+         App.xaml. No page subtitle (AUDIT_2 V-10): the title + the
+         idle hint said the same sentence three times. -->
     <Page.Resources>
-        <DataTemplate x:Key="SongRowTemplate" x:DataType="vm:SongItemViewModel">
-            <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="48" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <Image Source="{x:Bind Artwork}" Width="48" Height="48" Stretch="UniformToFill"
-                       AutomationProperties.AccessibilityView="Raw" />
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
-                               TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{x:Bind Artists}" Style="{ThemeResource CaptionTextBlockStyle}"
-                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-                <TextBlock Grid.Column="2" Text="{x:Bind DurationText}"
-                           Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
-                <Button Grid.Column="3" Width="44" Height="44" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        Command="{x:Bind ToggleFavoriteCommand}"
-                        AutomationProperties.AutomationId="SongFavoriteButton"
-                        AutomationProperties.Name="{x:Bind FavoriteMenuText, Mode=OneWay}">
-                    <FontIcon Glyph="{x:Bind FavoriteGlyph, Mode=OneWay}" FontSize="18" />
-                </Button>
-                <Button Grid.Column="4" Width="44" Height="44" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        AutomationProperties.AutomationId="SongMoreButton"
-                        AutomationProperties.Name="{x:Bind MoreActionsName}">
-                    <FontIcon Glyph="&#xE712;" FontSize="18" />
-                    <Button.Flyout>
-                        <MenuFlyout>
-                            <MenuFlyoutItem x:Uid="PlayMenuItem" Command="{x:Bind PlayCommand}"
-                                            AutomationProperties.AutomationId="SongPlayMenuItem" />
-                            <MenuFlyoutItem Text="{x:Bind FavoriteMenuText, Mode=OneWay}"
-                                            Command="{x:Bind ToggleFavoriteCommand}"
-                                            AutomationProperties.AutomationId="SongFavoriteMenuItem" />
-                            <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
-                                            IsEnabled="{x:Bind CanAddToPlaylist}"
-                                            AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
-                        </MenuFlyout>
-                    </Button.Flyout>
-                </Button>
-            </Grid>
-        </DataTemplate>
-
         <DataTemplate x:Key="TopResultRowTemplate" x:DataType="vm:SearchResultItemViewModel">
             <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
                 <Grid.ColumnDefinitions>
@@ -70,11 +25,10 @@
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                     <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
                                TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
-                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Subtitle}" Style="{StaticResource SecondaryCaptionStyle}"
+                               TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <Button Grid.Column="2" Width="44" Height="44" Padding="0"
-                        Background="Transparent" BorderThickness="0"
+                <Button Grid.Column="2" Style="{StaticResource IconButtonStyle}"
                         Command="{x:Bind PlayCommand}"
                         Visibility="{x:Bind IsSong, Converter={StaticResource BoolToVisibilityConverter}}"
                         AutomationProperties.AutomationId="TopResultPlayButton"
@@ -90,8 +44,8 @@
                        AutomationProperties.AccessibilityView="Raw" />
                 <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
                            TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
-                           Opacity="0.75" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{x:Bind Subtitle}" Style="{StaticResource SecondaryCaptionStyle}"
+                           TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </DataTemplate>
 
@@ -106,8 +60,8 @@
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                     <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
                                TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
-                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Subtitle}" Style="{StaticResource SecondaryCaptionStyle}"
+                               TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Grid>
         </DataTemplate>
@@ -115,8 +69,7 @@
 
     <ScrollViewer>
         <StackPanel Padding="24,24,24,24" Spacing="16">
-            <TextBlock x:Uid="SearchTitle" Style="{ThemeResource TitleTextBlockStyle}" />
-            <TextBlock x:Uid="SearchSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
+            <TextBlock x:Uid="SearchTitle" Style="{StaticResource PageTitleStyle}" />
 
             <SelectorBar x:Name="SearchTabs"
                          AutomationProperties.AutomationId="SearchTabs"
@@ -133,13 +86,16 @@
                                  AutomationProperties.AutomationId="SearchTabPlaylists" />
             </SelectorBar>
 
-            <!-- States -->
-            <StackPanel Orientation="Horizontal" Spacing="8"
+            <!-- States: centred loading (V-19), non-dismissable error
+                 bar (V-20), composed idle / no-results states (V-12). -->
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,48,0,0"
+                        HorizontalAlignment="Center"
                         Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Width="20" Height="20" />
+                <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Width="32" Height="32" />
                 <TextBlock x:Uid="LoadingText" Style="{ThemeResource BodyTextBlockStyle}" VerticalAlignment="Center" />
             </StackPanel>
             <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                     IsClosable="False"
                      Severity="Error"
                      x:Uid="ErrorInfoBar"
                      Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
@@ -149,18 +105,28 @@
                             AutomationProperties.AutomationId="SearchRetry" />
                 </InfoBar.ActionButton>
             </InfoBar>
-            <TextBlock x:Uid="SearchStartHint"
-                       Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.75"
-                       Visibility="{x:Bind ViewModel.ShowIdle, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-            <TextBlock Text="{x:Bind ViewModel.NoResultsText, Mode=OneWay}"
-                       Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.75"
-                       Visibility="{x:Bind ViewModel.ShowNoResults, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                       AutomationProperties.AutomationId="SearchNoResults" />
+            <StackPanel Style="{StaticResource EmptyStatePanelStyle}"
+                        Visibility="{x:Bind ViewModel.ShowIdle, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <FontIcon Glyph="&#xE721;" FontSize="40" HorizontalAlignment="Center"
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                          AutomationProperties.AccessibilityView="Raw" />
+                <TextBlock x:Uid="SearchStartHint" Style="{StaticResource EmptyStateGuidanceStyle}" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource EmptyStatePanelStyle}"
+                        Visibility="{x:Bind ViewModel.ShowNoResults, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <FontIcon Glyph="&#xE721;" FontSize="40" HorizontalAlignment="Center"
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                          AutomationProperties.AccessibilityView="Raw" />
+                <TextBlock Text="{x:Bind ViewModel.NoResultsText, Mode=OneWay}"
+                           Style="{StaticResource EmptyStateGuidanceStyle}"
+                           AutomationProperties.AutomationId="SearchNoResults" />
+            </StackPanel>
 
             <!-- Top results -->
             <StackPanel x:Name="TopPanel" Spacing="8">
                 <ListView ItemsSource="{x:Bind ViewModel.TopResults, Mode=OneWay}"
                           ItemTemplate="{StaticResource TopResultRowTemplate}"
+                          ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                           SelectionMode="None" IsItemClickEnabled="True"
                           ItemClick="TopResults_ItemClick"
                           AutomationProperties.AutomationId="SearchTopResults" />
@@ -170,6 +136,7 @@
             <StackPanel x:Name="SongsPanel" Spacing="8" Visibility="Collapsed">
                 <ListView ItemsSource="{x:Bind ViewModel.Songs, Mode=OneWay}"
                           ItemTemplate="{StaticResource SongRowTemplate}"
+                          ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                           SelectionMode="None"
                           AutomationProperties.AutomationId="SearchSongsList" />
                 <Button x:Uid="LoadMoreButton" Command="{x:Bind ViewModel.LoadMoreSongsCommand}"
@@ -195,6 +162,7 @@
             <StackPanel x:Name="ArtistsPanel" Spacing="8" Visibility="Collapsed">
                 <ListView ItemsSource="{x:Bind ViewModel.Artists, Mode=OneWay}"
                           ItemTemplate="{StaticResource TileRowTemplate}"
+                          ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                           SelectionMode="None" IsItemClickEnabled="True"
                           ItemClick="Tile_ItemClick"
                           AutomationProperties.AutomationId="SearchArtistsList" />

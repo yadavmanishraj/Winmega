@@ -8,55 +8,8 @@
          browse-module sections. Fluent rules: theme text styles only,
          4px spacing multiples, theme brushes only, hero surface 16px.
          Sections hide entirely when empty; errors are an InfoBar with
-         Retry. -->
+         Retry. The song-row template is the shared one in App.xaml. -->
     <Page.Resources>
-        <DataTemplate x:Key="SongRowTemplate" x:DataType="vm:SongItemViewModel">
-            <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="48" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <Image Source="{x:Bind Artwork}" Width="48" Height="48" Stretch="UniformToFill"
-                       AutomationProperties.AccessibilityView="Raw" />
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
-                               TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{x:Bind Artists}" Style="{ThemeResource CaptionTextBlockStyle}"
-                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-                <TextBlock Grid.Column="2" Text="{x:Bind DurationText}"
-                           Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
-                <Button Grid.Column="3" Width="44" Height="44" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        Command="{x:Bind ToggleFavoriteCommand}"
-                        AutomationProperties.AutomationId="SongFavoriteButton"
-                        AutomationProperties.Name="{x:Bind FavoriteMenuText, Mode=OneWay}">
-                    <FontIcon Glyph="{x:Bind FavoriteGlyph, Mode=OneWay}" FontSize="18" />
-                </Button>
-                <Button Grid.Column="4" Width="44" Height="44" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        AutomationProperties.AutomationId="SongMoreButton"
-                        AutomationProperties.Name="{x:Bind MoreActionsName}">
-                    <FontIcon Glyph="&#xE712;" FontSize="18" />
-                    <Button.Flyout>
-                        <MenuFlyout>
-                            <MenuFlyoutItem x:Uid="PlayMenuItem" Command="{x:Bind PlayCommand}"
-                                            AutomationProperties.AutomationId="SongPlayMenuItem" />
-                            <MenuFlyoutItem Text="{x:Bind FavoriteMenuText, Mode=OneWay}"
-                                            Command="{x:Bind ToggleFavoriteCommand}"
-                                            AutomationProperties.AutomationId="SongFavoriteMenuItem" />
-                            <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
-                                            IsEnabled="{x:Bind CanAddToPlaylist}"
-                                            AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
-                        </MenuFlyout>
-                    </Button.Flyout>
-                </Button>
-            </Grid>
-        </DataTemplate>
-
         <DataTemplate x:Key="HomeRowTemplate" x:DataType="vm:HomeItemViewModel">
             <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
                 <Grid.ColumnDefinitions>
@@ -69,11 +22,10 @@
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                     <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
                                TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
-                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Subtitle}" Style="{StaticResource SecondaryCaptionStyle}"
+                               TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <Button Grid.Column="2" Width="44" Height="44" Padding="0"
-                        Background="Transparent" BorderThickness="0"
+                <Button Grid.Column="2" Style="{StaticResource IconButtonStyle}"
                         Command="{x:Bind PlayCommand}"
                         Visibility="{x:Bind IsPlayable, Converter={StaticResource BoolToVisibilityConverter}}"
                         AutomationProperties.AutomationId="HomeEntityPlayButton"
@@ -89,8 +41,8 @@
                        AutomationProperties.AccessibilityView="Raw" />
                 <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
                            TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
-                           Opacity="0.75" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{x:Bind Subtitle}" Style="{StaticResource SecondaryCaptionStyle}"
+                           TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </DataTemplate>
     </Page.Resources>
@@ -98,48 +50,61 @@
     <ScrollViewer>
         <StackPanel Padding="24,24,24,24" Spacing="24">
 
-            <!-- Hero -->
-            <Border Background="{ThemeResource HeroSurfaceBrush}"
-                    CornerRadius="16" Padding="24"
+            <!-- Hero: the entity is the headline (AUDIT_2 V-07) — the
+                 greeting is demoted above it, the tint token washes
+                 the card's right side so the card doesn't read as a
+                 half-empty slab, and the text column is capped. -->
+            <Border Style="{StaticResource HeroCardStyle}"
                     Visibility="{x:Bind ViewModel.HasHero, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <Grid ColumnSpacing="20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Image Source="{x:Bind ViewModel.Hero.LargeArtwork, Mode=OneWay}"
-                           Width="160" Height="160" Stretch="UniformToFill"
-                           AutomationProperties.AccessibilityView="Raw" />
-                    <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
-                        <TextBlock Text="{x:Bind ViewModel.Greeting, Mode=OneWay}"
-                                   Style="{ThemeResource TitleTextBlockStyle}" />
-                        <TextBlock Text="{x:Bind ViewModel.Hero.Title, Mode=OneWay}"
-                                   Style="{ThemeResource SubtitleTextBlockStyle}"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock x:Uid="HomeSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                            <Button x:Uid="HomeHeroPlayButton"
-                                    Command="{x:Bind ViewModel.PlayHeroCommand}"
-                                    Style="{ThemeResource AccentButtonStyle}"
-                                    MinWidth="48" MinHeight="48"
-                                    AutomationProperties.AutomationId="HomeHeroPlay" />
-                            <Button x:Uid="OpenButton"
-                                    Click="HeroOpen_Click"
-                                    MinHeight="48"
-                                    Visibility="{x:Bind ViewModel.Hero.IsNavigable, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                    AutomationProperties.AutomationId="HomeHeroOpen" />
+                <Grid>
+                    <Border HorizontalAlignment="Right" Width="288" CornerRadius="12"
+                            Background="{ThemeResource HeroTintBrush}"
+                            AutomationProperties.AccessibilityView="Raw" />
+                    <Grid ColumnSpacing="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Image Source="{x:Bind ViewModel.Hero.LargeArtwork, Mode=OneWay}"
+                               Width="144" Height="144" Stretch="UniformToFill"
+                               AutomationProperties.AccessibilityView="Raw" />
+                        <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center"
+                                    MaxWidth="560" HorizontalAlignment="Left">
+                            <TextBlock Text="{x:Bind ViewModel.Greeting, Mode=OneWay}"
+                                       Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                            <TextBlock Text="{x:Bind ViewModel.Hero.Title, Mode=OneWay}"
+                                       Style="{ThemeResource TitleTextBlockStyle}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Uid="HomeSubtitle" Style="{StaticResource SecondaryTextStyle}" />
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                                <Button x:Uid="HomeHeroPlayButton"
+                                        Command="{x:Bind ViewModel.PlayHeroCommand}"
+                                        Style="{ThemeResource AccentButtonStyle}"
+                                        MinWidth="48" MinHeight="48"
+                                        AutomationProperties.AutomationId="HomeHeroPlay" />
+                                <Button x:Uid="OpenButton"
+                                        Click="HeroOpen_Click"
+                                        MinHeight="48"
+                                        Visibility="{x:Bind ViewModel.Hero.IsNavigable, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                        AutomationProperties.AutomationId="HomeHeroOpen" />
+                            </StackPanel>
                         </StackPanel>
-                    </StackPanel>
+                    </Grid>
                 </Grid>
             </Border>
 
-            <!-- Loading / error -->
-            <StackPanel Orientation="Horizontal" Spacing="8"
+            <!-- Loading / error: the loading row is centred in the
+                 content column, not stranded in the corner (V-19), and
+                 the error bar cannot be dismissed into a dead end
+                 (V-20). -->
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,48,0,0"
+                        HorizontalAlignment="Center"
                         Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Width="20" Height="20" />
+                <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Width="32" Height="32" />
                 <TextBlock x:Uid="LoadingText" Style="{ThemeResource BodyTextBlockStyle}" VerticalAlignment="Center" />
             </StackPanel>
             <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                     IsClosable="False"
                      Severity="Error"
                      x:Uid="ErrorInfoBar"
                      Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
@@ -153,9 +118,10 @@
             <!-- Jump back in (local history) -->
             <StackPanel Spacing="8"
                         Visibility="{x:Bind ViewModel.HasJumpBackIn, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <TextBlock x:Uid="SectionJumpBackIn" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="SectionJumpBackIn" Style="{StaticResource SectionHeaderStyle}" />
                 <ListView ItemsSource="{x:Bind ViewModel.JumpBackInItems, Mode=OneWay}"
                           ItemTemplate="{StaticResource SongRowTemplate}"
+                          ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                           SelectionMode="None"
                           AutomationProperties.AutomationId="HomeJumpBackInList" />
             </StackPanel>
@@ -163,9 +129,10 @@
             <!-- Trending songs -->
             <StackPanel Spacing="8"
                         Visibility="{x:Bind ViewModel.HasTrending, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <TextBlock x:Uid="SectionTrending" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="SectionTrending" Style="{StaticResource SectionHeaderStyle}" />
                 <ListView ItemsSource="{x:Bind ViewModel.TrendingItems, Mode=OneWay}"
                           ItemTemplate="{StaticResource HomeRowTemplate}"
+                          ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                           SelectionMode="None" IsItemClickEnabled="True"
                           ItemClick="EntityList_ItemClick"
                           AutomationProperties.AutomationId="HomeTrendingList" />
@@ -174,7 +141,7 @@
             <!-- New albums -->
             <StackPanel Spacing="8"
                         Visibility="{x:Bind ViewModel.HasNewAlbums, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <TextBlock x:Uid="SectionNewAlbums" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="SectionNewAlbums" Style="{StaticResource SectionHeaderStyle}" />
                 <GridView ItemsSource="{x:Bind ViewModel.NewAlbumItems, Mode=OneWay}"
                           ItemTemplate="{StaticResource HomeTileTemplate}"
                           SelectionMode="None" IsItemClickEnabled="True"
@@ -185,7 +152,7 @@
             <!-- Charts -->
             <StackPanel Spacing="8"
                         Visibility="{x:Bind ViewModel.HasCharts, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <TextBlock x:Uid="SectionCharts" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="SectionCharts" Style="{StaticResource SectionHeaderStyle}" />
                 <GridView ItemsSource="{x:Bind ViewModel.ChartItems, Mode=OneWay}"
                           ItemTemplate="{StaticResource HomeTileTemplate}"
                           SelectionMode="None" IsItemClickEnabled="True"
@@ -196,7 +163,7 @@
             <!-- Top playlists -->
             <StackPanel Spacing="8"
                         Visibility="{x:Bind ViewModel.HasTopPlaylists, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <TextBlock x:Uid="SectionTopPlaylists" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="SectionTopPlaylists" Style="{StaticResource SectionHeaderStyle}" />
                 <GridView ItemsSource="{x:Bind ViewModel.TopPlaylistItems, Mode=OneWay}"
                           ItemTemplate="{StaticResource HomeTileTemplate}"
                           SelectionMode="None" IsItemClickEnabled="True"
@@ -207,7 +174,7 @@
             <!-- Browse discover (channels — shape rules still apply) -->
             <StackPanel Spacing="8"
                         Visibility="{x:Bind ViewModel.HasDiscover, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <TextBlock x:Uid="SectionDiscover" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="SectionDiscover" Style="{StaticResource SectionHeaderStyle}" />
                 <GridView ItemsSource="{x:Bind ViewModel.DiscoverItems, Mode=OneWay}"
                           ItemTemplate="{StaticResource HomeTileTemplate}"
                           SelectionMode="None" IsItemClickEnabled="True"
