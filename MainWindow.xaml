@@ -373,7 +373,7 @@
                             </Flyout>
                         </Button.Flyout>
                     </Button>
-                    <Button Width="40" Height="40" Padding="0"
+                    <Button x:Name="QueueButton" Width="40" Height="40" Padding="0"
                             Background="Transparent" BorderThickness="0"
                             ToolTipService.ToolTip="Queue"
                             AutomationProperties.AutomationId="QueueButton"
@@ -483,14 +483,26 @@
 
                                     <!-- Up next: the live queue minus the
                                          current track (rebuilt in
-                                         code-behind). No drag-reorder:
-                                         the service exposes no move op. -->
+                                         code-behind). Drag-reorder: the
+                                         ListView rearranges the wrapper
+                                         rows live; on drop the shell
+                                         commits the dropped order via
+                                         PlayerService.ReorderQueue,
+                                         which permutes the play order
+                                         (a queue-only permutation would
+                                         leave the audible sequence
+                                         unchanged — the service's remap
+                                         follows songs, not slots). -->
                                     <ListView x:Name="QueueFlyoutList" Grid.Row="3"
                                               Margin="8,0,8,8"
                                               ItemsSource="{x:Bind UpNextItems}"
                                               SelectionMode="None"
                                               IsItemClickEnabled="True"
+                                              CanReorderItems="True"
+                                              AllowDrop="True"
                                               ItemClick="QueueFlyoutList_ItemClick"
+                                              DragItemsStarting="QueueFlyoutList_DragItemsStarting"
+                                              DragItemsCompleted="QueueFlyoutList_DragItemsCompleted"
                                               AutomationProperties.AutomationId="QueueFlyoutList"
                                               AutomationProperties.Name="Up next">
                                         <ListView.ItemContainerStyle>
