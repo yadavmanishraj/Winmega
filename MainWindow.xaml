@@ -290,12 +290,11 @@
                             AutomationProperties.Name="Volume" />
                     <!-- Lyrics + Queue are quick-view flyouts now
                          (approved sample, 2026-10-07): the strip click
-                         opens the flyout instead of navigating away;
-                         each flyout's footer opens the docked Now
-                         Playing panel at the named segment. Flyout
-                         content is declared inline in this window (no
-                         dictionary-hosted templates) and binds the
-                         same Player VM as the rest of the strip. -->
+                         opens the flyout instead of navigating away.
+                         Flyout content is declared inline in this
+                         window (no dictionary-hosted templates) and
+                         binds the same Player VM as the rest of the
+                         strip. -->
                     <Button Width="40" Height="40" Padding="0"
                             Background="Transparent" BorderThickness="0"
                             ToolTipService.ToolTip="Lyrics"
@@ -365,28 +364,10 @@
                                             BorderThickness="0,1,0,0"
                                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                             Padding="16,6">
-                                        <Grid ColumnSpacing="8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock x:Name="LyricsFlyoutCopyright" Grid.Column="0"
-                                                       Style="{StaticResource SecondaryCaptionStyle}"
-                                                       VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis" />
-                                            <Button Grid.Column="1"
-                                                    Background="Transparent" BorderThickness="0"
-                                                    Click="LyricsOpenNowPlaying_Click"
-                                                    AutomationProperties.AutomationId="LyricsOpenNowPlaying"
-                                                    AutomationProperties.Name="Open in Now Playing">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <SymbolIcon Symbol="FullScreen" Width="14" Height="14"
-                                                                VerticalAlignment="Center" />
-                                                    <TextBlock x:Name="LyricsOpenNowPlayingText"
-                                                               VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </Button>
-                                        </Grid>
+                                        <TextBlock x:Name="LyricsFlyoutCopyright"
+                                                   Style="{StaticResource SecondaryCaptionStyle}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
                                     </Border>
                                 </Grid>
                             </Flyout>
@@ -414,7 +395,6 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
-                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
                                     <!-- Header: title, count, Clear. -->
@@ -504,9 +484,7 @@
                                     <!-- Up next: the live queue minus the
                                          current track (rebuilt in
                                          code-behind). No drag-reorder:
-                                         the service exposes no move op,
-                                         and the Now Playing panel's queue
-                                         list remains the reorder surface. -->
+                                         the service exposes no move op. -->
                                     <ListView x:Name="QueueFlyoutList" Grid.Row="3"
                                               Margin="8,0,8,8"
                                               ItemsSource="{x:Bind UpNextItems}"
@@ -588,23 +566,6 @@
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
 
-                                    <Border Grid.Row="4"
-                                            BorderThickness="0,1,0,0"
-                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                            Padding="8,6">
-                                        <Button Background="Transparent" BorderThickness="0"
-                                                HorizontalAlignment="Left"
-                                                Click="QueueOpenNowPlaying_Click"
-                                                AutomationProperties.AutomationId="QueueOpenNowPlaying"
-                                                AutomationProperties.Name="Open Now Playing">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <SymbolIcon Symbol="FullScreen" Width="14" Height="14"
-                                                            VerticalAlignment="Center" />
-                                                <TextBlock x:Name="QueueOpenNowPlayingText"
-                                                           VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </Button>
-                                    </Border>
                                 </Grid>
                             </Flyout>
                         </Button.Flyout>

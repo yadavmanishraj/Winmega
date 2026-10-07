@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Input;
-using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -16,28 +13,20 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Omega.Core.Models;
 using Omega.Core.Persistence;
-using Omega.Core.Upstream;
 using Omega.Services;
 using Omega.ViewModels;
 using Windows.Foundation;
 
 namespace Omega.Controls;
 
-/// <summary>Which half of the panel's lower switch is showing.</summary>
-public enum NowPlayingPanelSegment
-{
-    Queue,
-    Lyrics,
-}
-
 /// <summary>
 /// The Now Playing panel (approved design, 2026-10-07) — the full
 /// player as a shell-docked pane. Feature-parity successor of the
 /// retired Now Playing page: same transient <see cref="PlayerViewModel"/>
 /// lifecycle (resolved per instance, disposed with it), same seek
-/// drag guard, same repeat-glyph refresh, same speed/sleep menus,
-/// same queue semantics (tap-to-jump, ListView drag-reorder writing
-/// through the service's collection), same lyrics fetch rules.
+/// drag guard, same repeat-glyph refresh, same speed/sleep menus.
+/// (The queue and lyrics segments the panel also carried were
+/// removed 2026-10-08 — the strip flyouts own those surfaces now.)
 ///
 /// The shell owns the panel's WIDTH (open/close slide, resize clamp
 /// + persistence, narrow-window rule); this control owns its content
@@ -47,17 +36,12 @@ public enum NowPlayingPanelSegment
 /// </summary>
 public sealed partial class NowPlayingPanel : UserControl
 {
-    private readonly JioSaavnClient _client;
     private readonly ILibraryStore _store;
-    private readonly Dictionary<string, LyricsResult?> _lyricsCache = new();
     private bool _isDraggingSeek;
     private bool _isRefreshingSeek;
     private bool _disposed;
-    private NowPlayingPanelSegment _segment = NowPlayingPanelSegment.Queue;
     private bool _isFavorite;
     private string? _favoriteSongId;
-    private CancellationTokenSource? _lyricsCts;
-    private string? _lyricsSongId;
     private uint? _gripPointerId;
     private double _gripStartX;
     private double _gripStartWidth;
@@ -68,7 +52,6 @@ public sealed partial class NowPlayingPanel : UserControl
         // read them (same pattern as the pages and the shell).
         IServiceProvider services = ((App)Application.Current).Services;
         ViewModel = services.GetRequiredService<PlayerViewModel>();
-        _client = services.GetRequiredService<JioSaavnClient>();
         _store = services.GetRequiredService<ILibraryStore>();
         InitializeComponent();
 
@@ -84,16 +67,12 @@ public sealed partial class NowPlayingPanel : UserControl
         PanelTitleText.Text = Res.Get("NowPlayingTitle");
         IdleTitleText.Text = Res.Get("NowPlayingIdleTitle");
         IdleBodyText.Text = Res.Get("NowPlayingIdleBody");
-        SegmentQueueButton.Content = Res.Get("Queue");
-        SegmentLyricsButton.Content = Res.Get("Lyrics");
-        LyricsRetryButton.Content = Res.Get("LyricsRetry");
 
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         Unloaded += OnPanelUnloaded;
         RefreshFromViewModel();
         BuildByline();
         _ = RefreshFavoriteAsync();
-        ShowSegment(NowPlayingPanelSegment.Queue);
     }
 
     /// <summary>Player view model (bound via x:Bind; this panel's own transient instance).</summary>
@@ -118,10 +97,9 @@ public sealed partial class NowPlayingPanel : UserControl
     public event EventHandler? ResizeResetRequested;
 
     /// <summary>
-    /// Tears the panel down: unsubscribes, cancels the lyrics fetch
-    /// and disposes this instance's view model. Called by the shell
-    /// after the close slide (and via Unloaded as a safety net);
-    /// idempotent.
+    /// Tears the panel down: unsubscribes and disposes this
+    /// instance's view model. Called by the shell after the close
+    /// slide (and via Unloaded as a safety net); idempotent.
     /// </summary>
     public void DisposePanel()
     {
@@ -131,59 +109,13 @@ public sealed partial class NowPlayingPanel : UserControl
         }
 
         _disposed = true;
-        _lyricsCts?.Cancel();
         ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         ViewModel.Dispose();
     }
 
     private void OnPanelUnloaded(object sender, RoutedEventArgs e) => DisposePanel();
 
-    // ------------------------------------------------------------------
-    // Segment switch
-    // ------------------------------------------------------------------
-
-    /// <summary>
-    /// Selects the Queue or Lyrics half (the shell calls this when
-    /// the panel is opened from a lyrics/queue route, or while it is
-    /// already open). Lyrics fetch lazily on first selection.
-    /// </summary>
-    public void ShowSegment(NowPlayingPanelSegment segment)
-    {
-        _segment = segment;
-        QueueList.Visibility = segment == NowPlayingPanelSegment.Queue
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        LyricsRoot.Visibility = segment == NowPlayingPanelSegment.Lyrics
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        RefreshSegmentButtons();
-
-        if (segment == NowPlayingPanelSegment.Lyrics)
-        {
-            _ = RefreshLyricsAsync();
-        }
-    }
-
-    private void SegmentQueueButton_Click(object sender, RoutedEventArgs e) =>
-        ShowSegment(NowPlayingPanelSegment.Queue);
-
-    private void SegmentLyricsButton_Click(object sender, RoutedEventArgs e) =>
-        ShowSegment(NowPlayingPanelSegment.Lyrics);
-
-    private void RefreshSegmentButtons()
-    {
-        SetSegmentButtonState(SegmentQueueButton, _segment == NowPlayingPanelSegment.Queue);
-        SetSegmentButtonState(SegmentLyricsButton, _segment == NowPlayingPanelSegment.Lyrics);
-    }
-
-    private void SetSegmentButtonState(Button button, bool selected)
-    {
-        button.Background = selected
-            ? GetThemeBrush("ControlFillColorDefaultBrush") ?? GetThemeBrush("SubtleFillColorSecondaryBrush")
-            : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
-    }
-
+    /// <summary>Resolves a theme brush by key (the favourite heart's active tint).</summary>
     private Brush? GetThemeBrush(string key)
     {
         // Framework theme brushes resolve straight off the
@@ -219,12 +151,6 @@ public sealed partial class NowPlayingPanel : UserControl
         {
             BuildByline();
             _ = RefreshFavoriteAsync();
-
-            // Track changed under the lyrics segment: refetch.
-            if (_segment == NowPlayingPanelSegment.Lyrics)
-            {
-                _ = RefreshLyricsAsync();
-            }
         }
     }
 
@@ -424,7 +350,7 @@ public sealed partial class NowPlayingPanel : UserControl
     }
 
     // ------------------------------------------------------------------
-    // Transport extras + queue + failure surface (the page's)
+    // Transport extras + failure surface (the page's)
     // ------------------------------------------------------------------
 
     private void RepeatButton_Click(object sender, RoutedEventArgs e) =>
@@ -448,52 +374,6 @@ public sealed partial class NowPlayingPanel : UserControl
         }
     }
 
-    private void QueueList_ItemClick(object sender, ItemClickEventArgs e)
-    {
-        if (e.ClickedItem is Song song)
-        {
-            ViewModel.PlayQueueItem(song);
-        }
-    }
-
-    private void QueueRow_PointerEntered(object sender, PointerRoutedEventArgs e)
-    {
-        if (sender is FrameworkElement row && FindDescendant<Button>(row) is { } remove)
-        {
-            remove.Visibility = Visibility.Visible;
-        }
-    }
-
-    private void QueueRow_PointerExited(object sender, PointerRoutedEventArgs e)
-    {
-        if (sender is FrameworkElement row && FindDescendant<Button>(row) is { } remove)
-        {
-            remove.Visibility = Visibility.Collapsed;
-        }
-    }
-
-    private void QueueRowRemove_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { DataContext: Song song })
-        {
-            return;
-        }
-
-        // Same sanctioned mutation as the strip flyout's remove: the
-        // service keeps every queue invariant in its
-        // CollectionChanged handler; removal is by reference so a
-        // duplicated song cannot evict its twin.
-        ObservableCollection<Song> queue = ViewModel.Queue;
-        for (int i = 0; i < queue.Count; i++)
-        {
-            if (ReferenceEquals(queue[i], song))
-            {
-                queue.RemoveAt(i);
-                return;
-            }
-        }
-    }
-
     private void FailureBar_Closed(InfoBar sender, InfoBarClosedEventArgs args) =>
         ViewModel.DismissErrorCommand.Execute(null);
 
@@ -501,139 +381,6 @@ public sealed partial class NowPlayingPanel : UserControl
     {
         ViewModel.DismissErrorCommand.Execute(null);
         ViewModel.NextTrackCommand.Execute(null);
-    }
-
-    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
-    {
-        int count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-        {
-            DependencyObject child = VisualTreeHelper.GetChild(root, i);
-            if (child is T match)
-            {
-                return match;
-            }
-
-            if (FindDescendant<T>(child) is { } nested)
-            {
-                return nested;
-            }
-        }
-
-        return null;
-    }
-
-    // ------------------------------------------------------------------
-    // Lyrics (the strip flyout's fetch: same Core call, same
-    // HasLyrics gate, same status wording, per-song cache)
-    // ------------------------------------------------------------------
-
-    private enum LyricsState
-    {
-        Content,
-        Loading,
-        Message,
-        Error,
-    }
-
-    private void LyricsRetryButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RefreshLyricsAsync();
-
-    private async Task RefreshLyricsAsync()
-    {
-        Song? song = ViewModel.CurrentSong;
-        if (song is null)
-        {
-            _lyricsSongId = null;
-            SetLyricsState(LyricsState.Message, Res.Get("LyricsNothingPlaying"));
-            return;
-        }
-
-        if (!song.HasLyrics)
-        {
-            _lyricsSongId = song.Id;
-            SetLyricsState(LyricsState.Message, Res.Get("LyricsUnavailable"));
-            return;
-        }
-
-        if (_lyricsCache.TryGetValue(song.Id, out LyricsResult? cached))
-        {
-            _lyricsSongId = song.Id;
-            if (cached is null)
-            {
-                SetLyricsState(LyricsState.Message, Res.Get("LyricsUnavailable"));
-            }
-            else
-            {
-                ShowLyrics(cached);
-            }
-
-            return;
-        }
-
-        _lyricsCts?.Cancel();
-        var cts = new CancellationTokenSource();
-        _lyricsCts = cts;
-        string songId = song.Id;
-        _lyricsSongId = songId;
-        SetLyricsState(LyricsState.Loading, Res.Get("LyricsLoading"));
-
-        try
-        {
-            LyricsResult? result = await _client.GetLyricsAsync(songId, cts.Token);
-            if (cts.IsCancellationRequested
-                || !string.Equals(_lyricsSongId, songId, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            _lyricsCache[songId] = result;
-            if (result is null)
-            {
-                SetLyricsState(LyricsState.Message, Res.Get("LyricsUnavailable"));
-                return;
-            }
-
-            ShowLyrics(result);
-        }
-        catch (OperationCanceledException)
-        {
-            // Superseded by a newer fetch or the panel closed.
-        }
-        catch (Exception)
-        {
-            if (!cts.IsCancellationRequested)
-            {
-                SetLyricsState(LyricsState.Error, Res.Get("LyricsLoadFailed"));
-            }
-        }
-    }
-
-    private void ShowLyrics(LyricsResult result)
-    {
-        LyricsBodyText.Text = result.Lyrics;
-        LyricsCopyrightText.Text = result.Copyright ?? string.Empty;
-        SetLyricsState(LyricsState.Content, null);
-    }
-
-    private void SetLyricsState(LyricsState state, string? message)
-    {
-        bool hasLyrics = state == LyricsState.Content;
-        LyricsBodyText.Visibility = hasLyrics ? Visibility.Visible : Visibility.Collapsed;
-        if (!hasLyrics)
-        {
-            LyricsBodyText.Text = string.Empty;
-            LyricsCopyrightText.Text = string.Empty;
-        }
-
-        LyricsStatusPanel.Visibility = hasLyrics ? Visibility.Collapsed : Visibility.Visible;
-        bool loading = state == LyricsState.Loading;
-        LyricsProgress.IsActive = loading;
-        LyricsProgress.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
-        LyricsStatusText.Text = message ?? string.Empty;
-        LyricsRetryButton.Visibility = state == LyricsState.Error
-            ? Visibility.Visible
-            : Visibility.Collapsed;
     }
 
     // ------------------------------------------------------------------

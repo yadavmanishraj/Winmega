@@ -675,7 +675,7 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            OpenNowPlayingPanel(null);
+            OpenNowPlayingPanel();
         }
     }
 
@@ -685,10 +685,10 @@ public sealed partial class MainWindow : Window
     /// is not a toggle).
     /// </summary>
     private void GoToNowPlayingMenuItem_Click(object sender, RoutedEventArgs e) =>
-        OpenNowPlayingPanel(null);
+        OpenNowPlayingPanel();
 
     private void OpenQueueMenuItem_Click(object sender, RoutedEventArgs e) =>
-        OpenNowPlayingPanel("queue");
+        OpenNowPlayingPanel();
 
     // ------------------------------------------------------------------
     // Now Playing panel (approved design, 2026-10-07): a shell-level
@@ -703,23 +703,13 @@ public sealed partial class MainWindow : Window
     // ------------------------------------------------------------------
 
     /// <summary>
-    /// Opens the panel (or, when it is already open, just applies
-    /// the requested segment). <paramref name="section"/> is the
-    /// route name the strip surfaces have always used: "queue" /
-    /// "lyrics" preselect that segment (AUDIT_1 B3 — controls must
-    /// not silently do the identical thing); null keeps the
-    /// default (Queue on a fresh panel, current segment on an
-    /// already-open one).
+    /// Opens the panel. When it is already open this is a no-op,
+    /// except mid-close: the close slide is cancelled and the panel
+    /// settles back at its open width instead of disposing a panel
+    /// the user just asked for.
     /// </summary>
-    private void OpenNowPlayingPanel(string? section)
+    private void OpenNowPlayingPanel()
     {
-        NowPlayingPanelSegment? segment = section switch
-        {
-            "queue" => NowPlayingPanelSegment.Queue,
-            "lyrics" => NowPlayingPanelSegment.Lyrics,
-            _ => null,
-        };
-
         if (_nowPlayingPanel is not null)
         {
             // Reopen racing a close slide: cancel the close and
@@ -730,11 +720,6 @@ public sealed partial class MainWindow : Window
                 StopPanelStoryboard();
                 _panelTargetWidth = EffectivePanelWidth();
                 _nowPlayingPanel.Width = _panelTargetWidth;
-            }
-
-            if (segment is { } existing)
-            {
-                _nowPlayingPanel.ShowSegment(existing);
             }
 
             return;
@@ -749,11 +734,6 @@ public sealed partial class MainWindow : Window
         panel.ResizeDragEnded += Panel_ResizeDragEnded;
         panel.ResizeResetRequested += Panel_ResizeResetRequested;
         NowPlayingPanelHost.Children.Add(panel);
-
-        if (segment is { } requested)
-        {
-            panel.ShowSegment(requested);
-        }
 
         panel.Width = 0;
         _panelTargetWidth = EffectivePanelWidth();
@@ -866,7 +846,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Removes the panel from the tree and tears it down. After
     /// this, nothing of the panel survives — the next open builds
-    /// a fresh instance (fresh segment, fresh scroll, fresh VM).
+    /// a fresh instance (fresh scroll position, fresh VM).
     /// </summary>
     private void DisposeNowPlayingPanel()
     {
@@ -994,9 +974,9 @@ public sealed partial class MainWindow : Window
     // strip buttons; opening one is an outside click for the other,
     // so they never stack. Presentation state is synced in code
     // (the shell's pattern for its dynamic surfaces); the lyrics
-    // fetch mirrors the Now Playing panel's — same Core call, same
-    // HasLyrics gate, same status wording — plus a per-song cache
-    // so reopening is instant.
+    // fetch uses the Core call behind a HasLyrics gate with the
+    // app's status wording, plus a per-song cache so reopening is
+    // instant.
     // ------------------------------------------------------------------
 
     private void InitFlyoutTexts()
@@ -1008,8 +988,6 @@ public sealed partial class MainWindow : Window
         ClearQueueButton.Content = Res.Get("QueueClear");
         QueueFlyoutEmptyTitle.Text = Res.Get("QueueEmptyTitle");
         QueueFlyoutEmptyBody.Text = Res.Get("QueueEmptyBody");
-        QueueOpenNowPlayingText.Text = Res.Get("OpenNowPlaying");
-        LyricsOpenNowPlayingText.Text = Res.Get("LyricsOpenNowPlaying");
         LyricsFlyoutRetry.Content = Res.Get("LyricsRetry");
     }
 
@@ -1067,9 +1045,8 @@ public sealed partial class MainWindow : Window
     {
         if (e.ClickedItem is QueueFlyoutItem item)
         {
-            // Same tap-to-jump the Now Playing panel's queue uses;
-            // the flyout stays open and re-syncs onto the new
-            // current track (StateChanged follows the jump).
+            // Tap-to-jump; the flyout stays open and re-syncs onto
+            // the new current track (StateChanged follows the jump).
             Player.PlayQueueItem(item.Song);
         }
     }
@@ -1099,10 +1076,9 @@ public sealed partial class MainWindow : Window
 
         // The service keeps every queue invariant (current-index and
         // play-order remap) in its CollectionChanged handler, so a
-        // plain removal IS the remove-from-queue op — the same
-        // mutation shape the Now Playing list's drag-reorder uses.
-        // Removal is by reference: duplicate copies of one song in
-        // the queue must not evict each other.
+        // plain removal IS the remove-from-queue op. Removal is by
+        // reference: duplicate copies of one song in the queue must
+        // not evict each other.
         ObservableCollection<Song> queue = Player.Queue;
         for (int i = 0; i < queue.Count; i++)
         {
@@ -1136,12 +1112,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void QueueOpenNowPlaying_Click(object sender, RoutedEventArgs e)
-    {
-        QueueFlyout.Hide();
-        OpenNowPlayingPanel("queue");
-    }
-
     private void LyricsFlyout_Opening(object sender, object e)
     {
         _lyricsFlyoutOpen = true;
@@ -1157,12 +1127,6 @@ public sealed partial class MainWindow : Window
     private void LyricsFlyoutRetry_Click(object sender, RoutedEventArgs e) =>
         _ = RefreshLyricsFlyoutAsync();
 
-    private void LyricsOpenNowPlaying_Click(object sender, RoutedEventArgs e)
-    {
-        LyricsFlyout.Hide();
-        OpenNowPlayingPanel("lyrics");
-    }
-
     private enum LyricsFlyoutState
     {
         Content,
@@ -1173,11 +1137,11 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// Fetches the current song's lyrics for the flyout. Gated on
-    /// <see cref="Song.HasLyrics"/> like the Now Playing panel (the
-    /// search payload's flag is the accurate one). Results cache per
-    /// song id — including the "upstream has none" answer — so
-    /// reopening the flyout is instant; a track change while the
-    /// flyout is open refetches (see OnPlayerPropertyChanged).
+    /// <see cref="Song.HasLyrics"/> (the search payload's flag is
+    /// the accurate one). Results cache per song id — including
+    /// the "upstream has none" answer — so reopening the flyout is
+    /// instant; a track change while the flyout is open refetches
+    /// (see OnPlayerPropertyChanged).
     /// </summary>
     private async Task RefreshLyricsFlyoutAsync()
     {
