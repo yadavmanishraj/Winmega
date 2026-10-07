@@ -44,14 +44,63 @@ public partial class HomeItemViewModel : ObservableObject
     public bool IsNavigable =>
         Kind is HomeEntityKind.Album or HomeEntityKind.Playlist or HomeEntityKind.Artist;
 
-    /// <summary>Detail args for navigable items; null for songs and display-only items.</summary>
+    /// <summary>
+    /// Detail args for navigable items; null for songs and
+    /// display-only items. Carries the card's title/subtitle/artwork
+    /// as the detail header's instant preview. When the entity has no
+    /// usable id but does carry a perma-URL, the args take the
+    /// link-token form (album/playlist only — there is no artist
+    /// link-token call); with neither, the item is not navigable.
+    /// </summary>
     public DetailNavigationArgs? DetailArgs => Kind switch
     {
-        HomeEntityKind.Album => DetailNavigationArgs.Album(Entity.Id),
-        HomeEntityKind.Playlist => DetailNavigationArgs.Playlist(Entity.Id),
-        HomeEntityKind.Artist => DetailNavigationArgs.Artist(Entity.Id),
+        HomeEntityKind.Album => BuildArgs("album"),
+        HomeEntityKind.Playlist => BuildArgs("playlist"),
+        HomeEntityKind.Artist => BuildArgs("artist"),
         _ => null,
     };
+
+    private DetailNavigationArgs? BuildArgs(string kind)
+    {
+        string? image = Entity.Image.Large ?? Entity.Image.Medium;
+        if (!string.IsNullOrWhiteSpace(Entity.Id))
+        {
+            return new DetailNavigationArgs(kind, Entity.Id, Entity.Title, Entity.Subtitle, image);
+        }
+
+        string? token = ExtractLinkToken(Entity.Url);
+        if (token is null || kind == "artist")
+        {
+            return null;
+        }
+
+        return new DetailNavigationArgs(kind, string.Empty, Entity.Title, Entity.Subtitle, image, Token: token);
+    }
+
+    /// <summary>The link token is the last path segment of a JioSaavn perma-URL.</summary>
+    private static string? ExtractLinkToken(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        string trimmed = url.Trim().TrimEnd('/');
+        int slash = trimmed.LastIndexOf('/');
+        if (slash < 0 || slash == trimmed.Length - 1)
+        {
+            return null;
+        }
+
+        string token = trimmed[(slash + 1)..];
+        int cut = token.IndexOfAny(new[] { '?', '#' });
+        if (cut >= 0)
+        {
+            token = token[..cut];
+        }
+
+        return token.Length > 0 ? token : null;
+    }
 
     /// <summary>Automation name for the row's play button.</summary>
     public string PlayName => Res.Get("Play");
