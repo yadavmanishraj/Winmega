@@ -414,7 +414,7 @@ public partial class LibraryViewModel : ObservableObject
             if (primary is not null && primary.Name.Length > 0)
             {
                 string key = primary.Id.Length > 0 ? "id:" + primary.Id : "name:" + primary.Name;
-                if (!artistGroups.TryGetValue(key, out (ArtistRef Artist, List<Song> Songs> group))
+                if (!artistGroups.TryGetValue(key, out (ArtistRef Artist, List<Song> Songs) group))
                 {
                     group = (primary, new List<Song>());
                     artistGroups.Add(key, group);
@@ -429,7 +429,7 @@ public partial class LibraryViewModel : ObservableObject
                 string key = !string.IsNullOrEmpty(song.AlbumId)
                     ? "id:" + song.AlbumId
                     : "name:" + song.AlbumName!.Trim() + "|" + (primary?.Name ?? string.Empty);
-                if (!albumGroups.TryGetValue(key, out (string Name, string? AlbumId, List<Song> Songs> group))
+                if (!albumGroups.TryGetValue(key, out (string Name, string? AlbumId, List<Song> Songs) group))
                 {
                     group = (song.AlbumName ?? song.AlbumId!, song.AlbumId, new List<Song>());
                     albumGroups.Add(key, group);
