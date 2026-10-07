@@ -79,7 +79,7 @@
                             VerticalAlignment="Center"
                             AutomationProperties.AutomationId="ShellPaneToggle"
                             Click="PaneToggle_Click">
-                        <SymbolIcon Symbol="GlobalNavButton" Width="16" Height="16" />
+                        <FontIcon Glyph="&#xE700;" FontSize="16" />
                     </Button>
                     <Button x:Name="BackButton"
                             Grid.Column="1"
@@ -682,7 +682,7 @@
                 <NavigationViewItem x:Name="NavSearchItem" x:Uid="NavSearch" Tag="search"
                                     AutomationProperties.AutomationId="NavSearch">
                     <NavigationViewItem.Icon>
-                        <SymbolIcon Symbol="Search" />
+                        <FontIcon Glyph="&#xE721;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItemHeader x:Uid="SidebarLibraryHeader" />
