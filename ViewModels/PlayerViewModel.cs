@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -174,6 +175,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _player.PlayQueueIndex(index);
         }
     }
+
+    /// <summary>
+    /// Queue flyout drag-reorder commit: every queued song except
+    /// the current track, in the dropped order — the service makes
+    /// that order the play sequence (see PlayerService.ReorderQueue).
+    /// </summary>
+    public void ReorderQueue(IReadOnlyList<Song> upNextInOrder) =>
+        _player.ReorderQueue(upNextInOrder);
 
     /// <summary>Sleep-timer menu: null = off.</summary>
     public void SetSleepTimer(TimeSpan? duration) => _player.SetSleepTimer(duration);

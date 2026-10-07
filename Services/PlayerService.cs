@@ -387,6 +387,146 @@ public sealed partial class PlayerService : IPlaybackGateway, IDisposable
     /// <summary>Tap-to-jump from the queue UI.</summary>
     public void PlayQueueIndex(int index) => Enqueue(() => StartTrackCore(index));
 
+    /// <summary>
+    /// Commits a queue drag-reorder (the strip flyout's): the caller
+    /// passes every queued song EXCEPT the current track, in the
+    /// order the user dropped them, and that order becomes the
+    /// sequence — the current track stays at the head of the play
+    /// order and the dropped rows follow it exactly, shuffle on or
+    /// off. The queue itself is permuted to the same arrangement
+    /// (the current track keeps its slot; the other slots take the
+    /// dropped order around it), so the flyout's queue-order
+    /// projection shows what will be heard.
+    ///
+    /// Why the caller cannot do this with plain <see cref="Queue"/>
+    /// mutations: the collection-changed remap follows SONGS — every
+    /// entry keeps its play position across a Move — so permuting
+    /// the queue alone would rearrange the display while Next kept
+    /// playing the pre-drag sequence. A reorder has to permute
+    /// <c>_playOrder</c>, which only the service owns; the queue
+    /// Moves in the core route through the same remap, and their
+    /// intermediate play orders are discarded when the final one is
+    /// assigned. Nothing here starts, stops, or reloads a track:
+    /// the current song is never a Move target, and the current
+    /// index is re-derived by reference after every step.
+    ///
+    /// A snapshot that no longer matches the queue minus the
+    /// current track (a track change landed mid-drag) is rejected
+    /// whole: nothing moves, and the caller resyncs its projection.
+    /// </summary>
+    public void ReorderQueue(IReadOnlyList<Song> upNextInOrder) =>
+        Enqueue(() => ReorderQueueCore(upNextInOrder));
+
+    /// <summary>UI-thread only: see <see cref="ReorderQueue"/>.</summary>
+    private void ReorderQueueCore(IReadOnlyList<Song> upNextInOrder)
+    {
+        // The anchor slot: valid only while it still holds the
+        // current song by reference (the collection-changed handler
+        // maintains exactly this; verified here because the whole
+        // translation keys off it).
+        int currentSlot = CurrentSong is not null &&
+            _currentIndex >= 0 && _currentIndex < Queue.Count &&
+            ReferenceEquals(Queue[_currentIndex], CurrentSong)
+            ? _currentIndex
+            : -1;
+
+        if (upNextInOrder.Count != Queue.Count - (currentSlot >= 0 ? 1 : 0))
+        {
+            return; // Stale snapshot: reject whole.
+        }
+
+        // The dropped rows must be exactly the queue minus the
+        // anchor slot, BY REFERENCE: Song is a record, so value
+        // equality would let one queue entry stand in for another
+        // (the flyout's rows are the queue's own instances).
+        var unmatched = new Dictionary<Song, int>(ReferenceEqualityComparer.Instance);
+        for (int i = 0; i < Queue.Count; i++)
+        {
+            if (i == currentSlot)
+            {
+                continue;
+            }
+
+            unmatched.TryGetValue(Queue[i], out int seen);
+            unmatched[Queue[i]] = seen + 1;
+        }
+
+        foreach (Song song in upNextInOrder)
+        {
+            if (!unmatched.TryGetValue(song, out int left) || left == 0)
+            {
+                return; // Stale snapshot: reject whole.
+            }
+
+            unmatched[song] = left - 1;
+        }
+
+        // Target arrangement: the anchor keeps its slot; the other
+        // slots take the dropped order in sequence. droppedAtSlot
+        // records where each dropped row lands, which is the play
+        // order assigned below (in queue indices, post-permutation).
+        var target = new Song[Queue.Count];
+        var droppedAtSlot = new int[upNextInOrder.Count];
+        int dropped = 0;
+        for (int slot = 0; slot < Queue.Count; slot++)
+        {
+            if (slot == currentSlot)
+            {
+                target[slot] = Queue[slot];
+            }
+            else
+            {
+                target[slot] = upNextInOrder[dropped];
+                droppedAtSlot[dropped] = slot;
+                dropped++;
+            }
+        }
+
+        // Realize the target with Moves. Each routes through
+        // OnQueueCollectionChanged, which re-derives the current
+        // index by following CurrentSong's reference — the anchor
+        // song itself is never the moved item (its slot already
+        // matches the target when the walk reaches it, and earlier
+        // Moves only shift it transiently, tracked by reference).
+        for (int i = 0; i < target.Length; i++)
+        {
+            if (ReferenceEquals(Queue[i], target[i]))
+            {
+                continue;
+            }
+
+            for (int j = i + 1; j < Queue.Count; j++)
+            {
+                if (ReferenceEquals(Queue[j], target[i]))
+                {
+                    Queue.Move(j, i);
+                    break;
+                }
+            }
+        }
+
+        // The point of the operation: the play order becomes the
+        // current track followed by the dropped rows in order. One
+        // statement covers both shuffle states, because the play
+        // order is the only sequence Next / Previous / auto-advance
+        // read. (The flyout lists every non-current song with no
+        // already-heard marker, so a heard track the user drags
+        // into the list joins the sequence where they dropped it —
+        // the dropped order IS the new sequence, in full.)
+        _playOrder.Clear();
+        if (currentSlot >= 0)
+        {
+            _playOrder.Add(_currentIndex);
+        }
+
+        foreach (int slot in droppedAtSlot)
+        {
+            _playOrder.Add(slot);
+        }
+
+        RaiseStateChanged();
+    }
+
     public void Pause() => Enqueue(() =>
     {
         _player.Pause();
