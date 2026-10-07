@@ -40,7 +40,12 @@ public sealed class RawAlbumDto
 
     // The true track total (VALIDATION §5); a String upstream.
     [JsonPropertyName("list_count")] public string? ListCount { get; set; }
-    [JsonPropertyName("list")] public List<RawSongDto> List { get; set; } = new();
+
+    // "" instead of an array when upstream inlines no tracks — tolerant
+    // song-list converter (same quirk as browse items).
+    [JsonPropertyName("list")]
+    [JsonConverter(typeof(FlexibleSongListConverter))]
+    public List<RawSongDto> List { get; set; } = new();
     [JsonPropertyName("more_info")] public RawAlbumMoreInfoDto? MoreInfo { get; set; }
 }
 
@@ -83,6 +88,11 @@ public sealed class RawPlaylistDto
     // The true song total (VALIDATION §5); a String upstream. The
     // returned list is only the requested page.
     [JsonPropertyName("list_count")] public string? ListCount { get; set; }
-    [JsonPropertyName("list")] public List<RawSongDto> List { get; set; } = new();
+
+    // "" instead of an array when upstream inlines no songs — tolerant
+    // song-list converter (same quirk as browse items).
+    [JsonPropertyName("list")]
+    [JsonConverter(typeof(FlexibleSongListConverter))]
+    public List<RawSongDto> List { get; set; } = new();
     [JsonPropertyName("more_info")] public RawPlaylistMoreInfoDto? MoreInfo { get; set; }
 }
