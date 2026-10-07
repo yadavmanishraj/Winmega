@@ -202,7 +202,14 @@ public sealed partial class NowPlayingPanel : UserControl
         {
             _lastShuffleVisual = ViewModel.IsShuffle;
             bool on = ViewModel.IsShuffle;
-            ShuffleIcon.Foreground = on ? GetThemeBrush("TransportActiveBrush") : null;
+            // Off-state = the explicit primary brush, NEVER null:
+            // a null Foreground leaves the SymbolIcon unpainted
+            // (invisible) — the strip's proven defect (proof
+            // 2026-10-08), reintroduced here and caught by Manish's
+            // hands the same day.
+            ShuffleIcon.Foreground = on
+                ? GetThemeBrush("TransportActiveBrush")
+                : GetThemeBrush("TextFillColorPrimaryBrush");
             ShuffleStateDot.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
             AutomationProperties.SetName(ShuffleButton, on ? "Shuffle on" : "Shuffle off");
         }
@@ -211,7 +218,9 @@ public sealed partial class NowPlayingPanel : UserControl
         {
             _lastRepeatVisual = ViewModel.RepeatMode;
             bool active = ViewModel.RepeatMode != RepeatMode.Off;
-            RepeatIcon.Foreground = active ? GetThemeBrush("TransportActiveBrush") : null;
+            RepeatIcon.Foreground = active
+                ? GetThemeBrush("TransportActiveBrush")
+                : GetThemeBrush("TextFillColorPrimaryBrush");
             RepeatStateDot.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
         }
 

@@ -320,7 +320,8 @@
                                   AutomationProperties.AutomationId="NowPlayingShuffle"
                                   AutomationProperties.Name="Shuffle off">
                         <Grid>
-                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" Width="20" Height="20" />
+                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" Width="20" Height="20"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                             <Ellipse x:Name="ShuffleStateDot" Width="4" Height="4"
                                      HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                      Margin="0,0,0,6" Visibility="Collapsed"
@@ -354,7 +355,8 @@
                             AutomationProperties.AutomationId="NowPlayingRepeat"
                             AutomationProperties.Name="Repeat">
                         <Grid>
-                            <SymbolIcon x:Name="RepeatIcon" Symbol="RepeatAll" Width="20" Height="20" />
+                            <SymbolIcon x:Name="RepeatIcon" Symbol="RepeatAll" Width="20" Height="20"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                             <Ellipse x:Name="RepeatStateDot" Width="4" Height="4"
                                      HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                      Margin="0,0,0,6" Visibility="Collapsed"
