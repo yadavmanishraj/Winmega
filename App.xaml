@@ -169,8 +169,10 @@
                  rules here: favourite and More are sibling buttons on
                  their own Auto columns (44px each, 12px spacing, no
                  shared cell, no overlap); the SAME MenuFlyout content
-                 is offered as the row's ContextFlyout so right-click
-                 works too; Play is also on the artwork (hover disc),
+                 (a ContextFlyout on the template root does not
+                 compile in App-level templates - WMC0612 - so the
+                 button menu is the menu); Play is also on the
+                 artwork (hover disc),
                  so the menu is never the only route to play. -->
             <DataTemplate x:Key="SongRowTemplate" x:DataType="vm:SongItemViewModel">
                 <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
@@ -181,31 +183,6 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <Grid.ContextFlyout>
-                        <MenuFlyout>
-                            <MenuFlyoutItem x:Uid="PlayMenuItem" Command="{x:Bind PlayCommand}"
-                                            AutomationProperties.AutomationId="SongPlayMenuItem" />
-                            <MenuFlyoutItem x:Uid="PlayNextMenuItem" Command="{x:Bind PlayNextCommand}"
-                                            Visibility="{x:Bind CanPlayNext, Converter={StaticResource BoolToVisibilityConverter}}"
-                                            AutomationProperties.AutomationId="SongPlayNextMenuItem" />
-                            <MenuFlyoutItem x:Uid="AddToQueueMenuItem" Command="{x:Bind AddToQueueCommand}"
-                                            Visibility="{x:Bind CanAddToQueue, Converter={StaticResource BoolToVisibilityConverter}}"
-                                            AutomationProperties.AutomationId="SongAddToQueueMenuItem" />
-                            <MenuFlyoutItem Text="{x:Bind FavoriteMenuText, Mode=OneWay}"
-                                            Command="{x:Bind ToggleFavoriteCommand}"
-                                            AutomationProperties.AutomationId="SongFavoriteMenuItem" />
-                            <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
-                                            IsEnabled="{x:Bind CanAddToPlaylist}"
-                                            AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
-                            <MenuFlyoutItem x:Uid="DownloadMenuItem" Command="{x:Bind DownloadCommand}"
-                                            Visibility="{x:Bind CanDownload, Converter={StaticResource BoolToVisibilityConverter}}"
-                                            AutomationProperties.AutomationId="SongDownloadMenuItem" />
-                            <MenuFlyoutItem Text="{x:Bind RemoveMenuText}"
-                                            Command="{x:Bind RemoveCommand}"
-                                            Visibility="{x:Bind CanRemove, Converter={StaticResource BoolToVisibilityConverter}}"
-                                            AutomationProperties.AutomationId="SongRemoveMenuItem" />
-                        </MenuFlyout>
-                    </Grid.ContextFlyout>
                     <Grid Width="48" Height="48">
                         <Image Source="{x:Bind Artwork}" Width="48" Height="48" Stretch="UniformToFill"
                                AutomationProperties.AccessibilityView="Raw" />
