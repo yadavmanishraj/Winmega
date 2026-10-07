@@ -58,8 +58,18 @@ public sealed partial class MainWindow : Window
 
     private void PlayPauseButton_Click(object sender, RoutedEventArgs e)
     {
-        // Placeholder until PlayerService lands (design §7): flips the
-        // shell's IsPlaying state through the generated command.
+        // The command forwards to the singleton PlayerService through
+        // the shell view model (design §7) — the same transport method
+        // the SMTC media keys invoke.
         ViewModel.TogglePlayPauseCommand.Execute(null);
+    }
+
+    private void NowPlayingOpen_Click(object sender, RoutedEventArgs e)
+    {
+        // The bar expands to the full Now Playing page (design §9.5).
+        if (ContentFrame.CurrentSourcePageType != typeof(NowPlayingPage))
+        {
+            ContentFrame.Navigate(typeof(NowPlayingPage));
+        }
     }
 }

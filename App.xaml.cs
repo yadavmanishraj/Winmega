@@ -1,7 +1,9 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
+using Omega.Core.Playback;
 using Omega.Core.Upstream;
+using Omega.Services;
 using Omega.ViewModels;
 
 namespace Omega;
@@ -32,7 +34,14 @@ public partial class App : Application
         var services = new ServiceCollection();
         // One singleton client (one HttpClient) for all upstream calls.
         services.AddSingleton(_ => new JioSaavnClient());
+        // Playback (design §7): the engine is a singleton; pages and
+        // view models depend on the IPlaybackGateway seam, and the
+        // concrete registration lets the Now Playing page reach the
+        // queue/player surface beyond the seam.
+        services.AddSingleton<PlayerService>();
+        services.AddSingleton<IPlaybackGateway>(provider => provider.GetRequiredService<PlayerService>());
         services.AddTransient<ShellViewModel>();
+        services.AddTransient<PlayerViewModel>();
         return services.BuildServiceProvider();
     }
 

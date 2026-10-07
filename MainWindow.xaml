@@ -75,13 +75,16 @@
         <!-- Page content -->
         <Frame x:Name="ContentFrame" Grid.Row="1" />
 
-        <!-- Floating Now Playing bar: acrylic, elevated, rounded with the
-             overlay corner radius (design §9.1). Expands to the full Now
-             Playing page in a later phase. -->
+        <!-- Floating Now Playing bar: acrylic (the shell's ONE transient
+             surface — the window itself stays Mica), elevated, rounded
+             with the overlay corner radius (design §9.1). The artwork +
+             metadata are a real Button opening the full Now Playing
+             page; state binds to ShellViewModel, which mirrors the
+             singleton PlayerService. -->
         <Border Grid.Row="1"
                 VerticalAlignment="Bottom"
                 Margin="16"
-                Padding="16,10"
+                Padding="16,12"
                 CornerRadius="{ThemeResource OverlayCornerRadius}"
                 Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -95,15 +98,31 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Text="{x:Bind ViewModel.NowPlayingTitle, Mode=OneWay}"
-                               Style="{ThemeResource BodyStrongTextBlockStyle}"
-                               TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{x:Bind ViewModel.NowPlayingSubtitle, Mode=OneWay}"
-                               Style="{ThemeResource CaptionTextBlockStyle}"
-                               Opacity="0.75"
-                               TextTrimming="CharacterEllipsis" />
-                </StackPanel>
+                <Button Grid.Column="0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        VerticalAlignment="Center"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="0"
+                        AutomationProperties.AutomationId="NowPlayingOpen"
+                        AutomationProperties.Name="Open Now Playing"
+                        Click="NowPlayingOpen_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <Image Width="40" Height="40"
+                               Stretch="UniformToFill"
+                               Source="{x:Bind ViewModel.NowPlayingArtworkSource, Mode=OneWay}" />
+                        <StackPanel VerticalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind ViewModel.NowPlayingTitle, Mode=OneWay}"
+                                       Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{x:Bind ViewModel.NowPlayingSubtitle, Mode=OneWay}"
+                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                       Opacity="0.75"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </StackPanel>
+                </Button>
                 <Button x:Name="PlayPauseButton"
                         Grid.Column="1"
                         Width="40" Height="40" Padding="0"
@@ -113,7 +132,7 @@
                         AutomationProperties.AutomationId="NowPlayingPlayPause"
                         AutomationProperties.Name="Play or pause"
                         Click="PlayPauseButton_Click">
-                    <SymbolIcon Symbol="Play" />
+                    <SymbolIcon Symbol="{x:Bind ViewModel.PlayPauseSymbol, Mode=OneWay}" />
                 </Button>
             </Grid>
         </Border>
