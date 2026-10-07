@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Input;
@@ -78,6 +79,19 @@ public sealed partial class HomePage : Page
     // A tap that lands on a card's own play button runs only the
     // button's Command (Play) and never reaches this table, so
     // playback never double-fires.
+    //
+    // The handlers below read the item from the root's DataContext —
+    // which ItemsRepeater, unlike ListView/GridView, NEVER assigns:
+    // its x:Bind templates render straight from the template
+    // engine's context while the element's DataContext property
+    // stays null, so a DataContext-reading handler silently no-ops
+    // (proven by pointer trace, 2026-10-07: Tapped fired on the
+    // card root with DataContext null and every Home card tap was
+    // dead). SetElementItem closes that gap: every repeater's
+    // ElementPrepared assigns the item as the element's DataContext
+    // (and re-assigns it when the element recycles to a new item).
+    // Do not remove those wirings — card taps, Enter/Space
+    // activation, and the disc-exclusion check all depend on them.
 
     private void EntityCard_Tapped(object sender, TappedRoutedEventArgs e)
     {
@@ -317,6 +331,7 @@ public sealed partial class HomePage : Page
             return;
         }
 
+        SetElementItem(sender, args);
         ApplyArtworkFrameSize(element);
 
         Button? playButton = FindDescendant<Button>(element, "HomeEntityPlayButton");
@@ -376,6 +391,34 @@ public sealed partial class HomePage : Page
         if (element.Tag is CardHoverState state)
         {
             state.PointerOver = false;
+        }
+    }
+
+    /// <summary>
+    /// ElementPrepared for the song/trending repeaters, whose cards
+    /// need no hover wiring — the item assignment is all they need
+    /// for tap/keyboard activation (see SetElementItem).
+    /// </summary>
+    private void CardRepeater_ElementPrepared(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args) =>
+        SetElementItem(sender, args);
+
+    /// <summary>
+    /// Assigns the item a realized card element represents as its
+    /// DataContext. ItemsRepeater never does this itself (its
+    /// templates bind through the x:Bind template context, so cards
+    /// render correctly with a null DataContext) — but the Tapped /
+    /// KeyDown activation handlers identify the tapped card by its
+    /// DataContext, so without this every card tap is a silent
+    /// no-op. ElementPrepared fires again when an element recycles
+    /// to a different index, keeping the assignment current.
+    /// </summary>
+    private static void SetElementItem(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args)
+    {
+        if (args.Element is FrameworkElement element
+            && sender.ItemsSource is IList items
+            && args.Index >= 0 && args.Index < items.Count)
+        {
+            element.DataContext = items[args.Index];
         }
     }
 
