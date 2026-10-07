@@ -37,11 +37,18 @@ public sealed partial class LibraryPage : Page
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        ViewModel.AttachDownloadUpdates();
         await ViewModel.LoadAllAsync();
         if (e.Parameter is LibraryNavigationArgs args)
         {
             ApplyNavigationArgs(args);
         }
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        ViewModel.DetachDownloadUpdates();
+        base.OnNavigatedFrom(e);
     }
 
     /// <summary>
@@ -51,23 +58,31 @@ public sealed partial class LibraryPage : Page
     /// for the Playlists tab, preselect the requested playlist — setting
     /// <see cref="LibraryViewModel.SelectedPlaylist"/> loads its songs
     /// through the VM's selection handler. Runs only on navigation, so
-    /// later user tab clicks are never overridden.
+    /// later user tab clicks are never overridden. Tab order (FX3):
+    /// 0 Favorites, 1 Playlists, 2 Artists, 3 Albums, 4 Songs,
+    /// 5 History, 6 Downloads.
     /// </summary>
     private void ApplyNavigationArgs(LibraryNavigationArgs args)
     {
         int index = args.Tab switch
         {
             "playlists" => 1,
-            "history" => 2,
-            "downloads" => 3,
+            "artists" => 2,
+            "albums" => 3,
+            "songs" => 4,
+            "history" => 5,
+            "downloads" => 6,
             _ => 0,
         };
 
         SelectorBarItem item = index switch
         {
             1 => TabPlaylists,
-            2 => TabHistory,
-            3 => TabDownloads,
+            2 => TabArtists,
+            3 => TabAlbums,
+            4 => TabSongs,
+            5 => TabHistory,
+            6 => TabDownloads,
             _ => TabFavorites,
         };
         item.IsSelected = true;
@@ -93,13 +108,25 @@ public sealed partial class LibraryPage : Page
         {
             SetTab(1);
         }
-        else if (sender.SelectedItem == TabHistory)
+        else if (sender.SelectedItem == TabArtists)
         {
             SetTab(2);
         }
-        else if (sender.SelectedItem == TabDownloads)
+        else if (sender.SelectedItem == TabAlbums)
         {
             SetTab(3);
+        }
+        else if (sender.SelectedItem == TabSongs)
+        {
+            SetTab(4);
+        }
+        else if (sender.SelectedItem == TabHistory)
+        {
+            SetTab(5);
+        }
+        else if (sender.SelectedItem == TabDownloads)
+        {
+            SetTab(6);
         }
         else
         {
@@ -111,8 +138,52 @@ public sealed partial class LibraryPage : Page
     {
         FavoritesPanel.Visibility = index == 0 ? Visibility.Visible : Visibility.Collapsed;
         PlaylistsPanel.Visibility = index == 1 ? Visibility.Visible : Visibility.Collapsed;
-        HistoryPanel.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
-        DownloadsPanel.Visibility = index == 3 ? Visibility.Visible : Visibility.Collapsed;
+        ArtistsPanel.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
+        AlbumsPanel.Visibility = index == 3 ? Visibility.Visible : Visibility.Collapsed;
+        SongsPanel.Visibility = index == 4 ? Visibility.Visible : Visibility.Collapsed;
+        HistoryPanel.Visibility = index == 5 ? Visibility.Visible : Visibility.Collapsed;
+        DownloadsPanel.Visibility = index == 6 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Row activation: clicking a song row plays it (the row's Play command).</summary>
+    private void SongRow_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is SongItemViewModel row)
+        {
+            row.PlayCommand.Execute(null);
+        }
+    }
+
+    /// <summary>
+    /// Group tile activation: groups carrying an upstream id open the
+    /// matching Detail page; id-less (local-only) groups filter the
+    /// Songs tab instead.
+    /// </summary>
+    private async void Group_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is not LibraryGroupItemViewModel group)
+        {
+            return;
+        }
+
+        if (group.DetailArgs is { } args)
+        {
+            Frame.Navigate(typeof(DetailPage), args);
+            return;
+        }
+
+        await ViewModel.ApplyGroupFilterAsync(group);
+        TabSongs.IsSelected = true;
+        SetTab(4);
+    }
+
+    /// <summary>Downloads row activation: play (completed) or retry (failed).</summary>
+    private async void DownloadsList_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is DownloadItemViewModel item)
+        {
+            await ViewModel.PlayDownloadAsync(item);
+        }
     }
 
     private async void CreatePlaylist_Click(object sender, RoutedEventArgs e)

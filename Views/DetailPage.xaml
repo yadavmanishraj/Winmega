@@ -50,6 +50,10 @@
                             <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
                                             IsEnabled="{x:Bind CanAddToPlaylist}"
                                             AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
+                            <MenuFlyoutItem Text="{x:Bind DownloadMenuText}"
+                                            Command="{x:Bind DownloadCommand}"
+                                            Visibility="{x:Bind CanDownload, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            AutomationProperties.AutomationId="SongDownloadMenuItem" />
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
@@ -112,13 +116,20 @@
                         <TextBlock Text="{x:Bind ViewModel.MetaText, Mode=OneWay}"
                                    Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8"
                                    TextWrapping="Wrap" />
-                        <Button x:Uid="PlayAllButton"
-                                Command="{x:Bind ViewModel.PlayAllCommand}"
-                                Style="{ThemeResource AccentButtonStyle}"
-                                MinWidth="48" MinHeight="48" Margin="0,8,0,0"
-                                HorizontalAlignment="Left"
-                                Visibility="{x:Bind ViewModel.HasSongs, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                AutomationProperties.AutomationId="DetailPlayAll" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0"
+                                    HorizontalAlignment="Left">
+                            <Button x:Uid="PlayAllButton"
+                                    Command="{x:Bind ViewModel.PlayAllCommand}"
+                                    Style="{ThemeResource AccentButtonStyle}"
+                                    MinWidth="48" MinHeight="48"
+                                    Visibility="{x:Bind ViewModel.HasSongs, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    AutomationProperties.AutomationId="DetailPlayAll" />
+                            <Button x:Uid="DownloadAlbumButton"
+                                    Command="{x:Bind ViewModel.DownloadAllCommand}"
+                                    MinWidth="48" MinHeight="48"
+                                    Visibility="{x:Bind ViewModel.CanDownloadAll, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    AutomationProperties.AutomationId="DetailDownloadAll" />
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </Border>

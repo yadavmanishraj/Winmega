@@ -26,6 +26,7 @@ public partial class SongItemViewModel : ObservableObject
     private readonly Action<Song>? _addToPlaylistHandler;
     private readonly Func<SongItemViewModel, Task>? _removeHandler;
     private readonly Action<SongItemViewModel>? _favoriteChangedHandler;
+    private readonly Func<Song, Task>? _downloadHandler;
 
     public SongItemViewModel(
         Song song,
@@ -33,7 +34,8 @@ public partial class SongItemViewModel : ObservableObject
         Func<Song, Task> playHandler,
         Action<Song>? addToPlaylistHandler = null,
         Func<SongItemViewModel, Task>? removeHandler = null,
-        Action<SongItemViewModel>? favoriteChangedHandler = null)
+        Action<SongItemViewModel>? favoriteChangedHandler = null,
+        Func<Song, Task>? downloadHandler = null)
     {
         Song = song;
         _store = store;
@@ -41,6 +43,7 @@ public partial class SongItemViewModel : ObservableObject
         _addToPlaylistHandler = addToPlaylistHandler;
         _removeHandler = removeHandler;
         _favoriteChangedHandler = favoriteChangedHandler;
+        _downloadHandler = downloadHandler;
     }
 
     public Song Song { get; }
@@ -115,4 +118,18 @@ public partial class SongItemViewModel : ObservableObject
     [RelayCommand]
     private Task RemoveAsync() =>
         _removeHandler is null ? Task.CompletedTask : _removeHandler(this);
+
+    // ----------------------------------------------------------------
+    // Download (FX3): present only when the owning page supplies a
+    // download handler (Library / Detail) — the row menu hides the
+    // item where CanDownload is false, mirroring CanAddToPlaylist.
+    // ----------------------------------------------------------------
+
+    public bool CanDownload => _downloadHandler is not null;
+
+    public string DownloadMenuText => Res.Get("Download");
+
+    [RelayCommand]
+    private Task DownloadAsync() =>
+        _downloadHandler is null ? Task.CompletedTask : _downloadHandler(Song);
 }

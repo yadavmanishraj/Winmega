@@ -46,6 +46,9 @@ public partial class App : Application
         // Library persistence (design §6): one SQLite store for
         // favourites, playlists, history and downloads.
         services.AddSingleton<ILibraryStore>(_ => SqliteLibraryStore.CreateDefault());
+        // Download engine (FX3): streams songs to LocalFolder\Downloads
+        // and mirrors progress into the store's download records.
+        services.AddSingleton<DownloadService>();
         // Page ViewModels (real-data pages).
         services.AddTransient<HomeViewModel>();
         services.AddTransient<SearchViewModel>();

@@ -11,6 +11,7 @@ using Omega.Core.Models;
 using Omega.Core.Persistence;
 using Omega.Core.Playback;
 using Omega.Core.Upstream;
+using Omega.Services;
 
 namespace Omega.ViewModels;
 
@@ -27,15 +28,17 @@ public partial class DetailViewModel : ObservableObject
     private readonly JioSaavnClient _client;
     private readonly IPlaybackGateway _playback;
     private readonly ILibraryStore _store;
+    private readonly DownloadService _downloadService;
     private CancellationTokenSource? _loadCts;
     private int _artistSongsNextPage;
     private int _artistSongsTotal;
 
-    public DetailViewModel(JioSaavnClient client, IPlaybackGateway playback, ILibraryStore store)
+    public DetailViewModel(JioSaavnClient client, IPlaybackGateway playback, ILibraryStore store, DownloadService downloadService)
     {
         _client = client;
         _playback = playback;
         _store = store;
+        _downloadService = downloadService;
     }
 
     /// <summary>Raised when a song's "Add to playlist" action is chosen; the page shows the picker.</summary>
@@ -293,7 +296,25 @@ public partial class DetailViewModel : ObservableObject
     }
 
     private SongItemViewModel MakeRow(Song song, Func<IReadOnlyList<Song>> queueProvider) =>
-        new(song, _store, s => PlaySongAsync(s, queueProvider()), s => AddToPlaylistRequested?.Invoke(s));
+        new(
+            song,
+            _store,
+            s => PlaySongAsync(s, queueProvider()),
+            s => AddToPlaylistRequested?.Invoke(s),
+            downloadHandler: s => _downloadService.DownloadAsync(s));
+
+    /// <summary>True when the header offers "download all" (album / playlist track lists).</summary>
+    public bool CanDownloadAll => (Kind == "album" || Kind == "playlist") && Songs.Count > 0;
+
+    /// <summary>Downloads every track of the album/playlist, sequentially (FX3).</summary>
+    [RelayCommand]
+    private async Task DownloadAllAsync()
+    {
+        foreach (SongItemViewModel row in Songs)
+        {
+            await _downloadService.DownloadAsync(row.Song);
+        }
+    }
 
     private async Task PlaySongAsync(Song song, IReadOnlyList<Song> queue)
     {
@@ -317,6 +338,7 @@ public partial class DetailViewModel : ObservableObject
         OnPropertyChanged(nameof(HasSingles));
         OnPropertyChanged(nameof(HasTopAlbums));
         OnPropertyChanged(nameof(HasSimilarArtists));
+        OnPropertyChanged(nameof(CanDownloadAll));
     }
 
     partial void OnErrorMessageChanged(string? value) => OnPropertyChanged(nameof(HasError));
