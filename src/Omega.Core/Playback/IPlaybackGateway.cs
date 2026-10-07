@@ -42,6 +42,28 @@ public interface IPlaybackGateway
     /// </summary>
     Task PlayAsync(Song song, IReadOnlyList<Song>? queue = null, CancellationToken ct = default);
 
+    /// <summary>
+    /// Inserts <paramref name="song"/> into the queue so it plays
+    /// immediately after the current track — in the effective play
+    /// order, so under shuffle it is the next thing heard regardless
+    /// of where it lands in the queue list. A song already queued
+    /// (matched by id, like <see cref="PlayAsync"/>) is moved, not
+    /// duplicated; "playing next" the current track is a no-op. With
+    /// nothing playing, the song simply starts (within the existing
+    /// queue when present). Like queued songs from
+    /// <see cref="PlayAsync"/>, the song's stream ladder is resolved
+    /// when its turn comes, not at insert time.
+    /// </summary>
+    Task PlayNextAsync(Song song);
+
+    /// <summary>
+    /// Appends <paramref name="song"/> to the end of the queue (and
+    /// of the play order — it is heard after everything already
+    /// queued, shuffle included). A song already queued (matched by
+    /// id) is not duplicated. Does not start playback by itself.
+    /// </summary>
+    Task EnqueueAsync(Song song);
+
     /// <summary>Pauses playback (no-op when nothing is playing).</summary>
     void Pause();
 

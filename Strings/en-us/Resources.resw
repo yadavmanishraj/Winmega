@@ -128,6 +128,15 @@
   <data name="AddToPlaylistMenuItem.Text" xml:space="preserve">
     <value>Add to playlist…</value>
   </data>
+  <data name="PlayNextMenuItem.Text" xml:space="preserve">
+    <value>Play next</value>
+  </data>
+  <data name="AddToQueueMenuItem.Text" xml:space="preserve">
+    <value>Add to queue</value>
+  </data>
+  <data name="SearchSectionFailed.Text" xml:space="preserve">
+    <value>Couldn't load these results.</value>
+  </data>
 
   <!-- Home -->
   <data name="HomeHeroPlayButton.Content" xml:space="preserve">

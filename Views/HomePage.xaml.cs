@@ -51,6 +51,14 @@ public sealed partial class HomePage : Page
         }
     }
 
+    private void SongRow_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is SongItemViewModel row)
+        {
+            row.PlayCommand.Execute(null);
+        }
+    }
+
     private void HeroOpen_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.Hero?.DetailArgs is { } args)

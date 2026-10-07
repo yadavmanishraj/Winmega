@@ -90,10 +90,33 @@ public partial class SearchViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HasSearched { get; set; }
 
+    // Per-section load failures (audit M3): a section that failed
+    // must not masquerade as an empty one — each flag drives an
+    // inline "couldn't load — Retry" row in that section's panel
+    // instead of the panel simply rendering blank.
+    [ObservableProperty]
+    public partial bool TopLoadFailed { get; set; }
+
+    [ObservableProperty]
+    public partial bool SongsLoadFailed { get; set; }
+
+    [ObservableProperty]
+    public partial bool AlbumsLoadFailed { get; set; }
+
+    [ObservableProperty]
+    public partial bool ArtistsLoadFailed { get; set; }
+
+    [ObservableProperty]
+    public partial bool PlaylistsLoadFailed { get; set; }
+
+    public bool AnySectionFailed =>
+        TopLoadFailed || SongsLoadFailed || AlbumsLoadFailed ||
+        ArtistsLoadFailed || PlaylistsLoadFailed;
+
     public bool ShowIdle => !HasSearched && !IsLoading;
 
     public bool ShowNoResults =>
-        HasSearched && !IsLoading && ErrorMessage is null &&
+        HasSearched && !IsLoading && ErrorMessage is null && !AnySectionFailed &&
         TopResults.Count == 0 && Songs.Count == 0 && Albums.Count == 0 &&
         Artists.Count == 0 && Playlists.Count == 0;
 
@@ -156,6 +179,11 @@ public partial class SearchViewModel : ObservableObject
 
         IsLoading = true;
         ErrorMessage = null;
+        TopLoadFailed = false;
+        SongsLoadFailed = false;
+        AlbumsLoadFailed = false;
+        ArtistsLoadFailed = false;
+        PlaylistsLoadFailed = false;
         NotifyStateVisibility();
         int failures = 0;
         string? firstError = null;
@@ -169,7 +197,10 @@ public partial class SearchViewModel : ObservableObject
             // Favourite toggles degrade; search itself is upstream-only.
         }
 
-        // Top results (lightweight global search).
+        // Top results (lightweight global search). DisplayOnly
+        // items are filtered out (audit M6): they can neither play
+        // nor navigate, so rendering them identically to live rows
+        // made the tab feel randomly unresponsive.
         try
         {
             SearchResults all = await _client.SearchAllAsync(Query, Token());
@@ -177,12 +208,20 @@ public partial class SearchViewModel : ObservableObject
             foreach (SearchItem item in all.Songs
                          .Concat(all.Albums).Concat(all.Artists).Concat(all.Playlists).Take(30))
             {
-                TopResults.Add(new SearchResultItemViewModel(item, _client, _playback, _store));
+                var row = new SearchResultItemViewModel(item, _client, _playback, _store);
+                if (row.Kind != HomeEntityKind.DisplayOnly)
+                {
+                    TopResults.Add(row);
+                }
             }
 
             foreach (SearchItem item in all.TopQuery.Take(5))
             {
-                TopResults.Insert(0, new SearchResultItemViewModel(item, _client, _playback, _store));
+                var row = new SearchResultItemViewModel(item, _client, _playback, _store);
+                if (row.Kind != HomeEntityKind.DisplayOnly)
+                {
+                    TopResults.Insert(0, row);
+                }
             }
         }
         catch (OperationCanceledException)
@@ -192,13 +231,18 @@ public partial class SearchViewModel : ObservableObject
         catch (Exception ex)
         {
             failures++;
+            TopLoadFailed = true;
             firstError ??= ex.Message;
         }
 
-        failures += await LoadTabAsync(_songsTab, value => HasMoreSongs = value);
-        failures += await LoadTabAsync(_albumsTab, value => HasMoreAlbums = value);
-        failures += await LoadTabAsync(_artistsTab, value => HasMoreArtists = value);
-        failures += await LoadTabAsync(_playlistsTab, value => HasMorePlaylists = value);
+        failures += await LoadTabAsync(_songsTab, value => HasMoreSongs = value,
+            failed => SongsLoadFailed = failed);
+        failures += await LoadTabAsync(_albumsTab, value => HasMoreAlbums = value,
+            failed => AlbumsLoadFailed = failed);
+        failures += await LoadTabAsync(_artistsTab, value => HasMoreArtists = value,
+            failed => ArtistsLoadFailed = failed);
+        failures += await LoadTabAsync(_playlistsTab, value => HasMorePlaylists = value,
+            failed => PlaylistsLoadFailed = failed);
         if (failures > 0 && firstError is null)
         {
             firstError = "Some result types failed to load.";
@@ -256,12 +300,13 @@ public partial class SearchViewModel : ObservableObject
     }
 
     private async Task<int> LoadTabAsync<TItem, TRow>(
-        PagedTab<TItem, TRow> tab, Action<bool> setHasMore)
+        PagedTab<TItem, TRow> tab, Action<bool> setHasMore, Action<bool> setFailed)
     {
         try
         {
             await tab.LoadFirstAsync();
             setHasMore(tab.HasMore);
+            setFailed(false);
             return 0;
         }
         catch (OperationCanceledException)
@@ -271,12 +316,15 @@ public partial class SearchViewModel : ObservableObject
         catch (Exception)
         {
             setHasMore(false);
+            setFailed(true);
             return 1;
         }
     }
 
     private SongItemViewModel MakeRow(Song song) =>
-        new(song, _store, PlaySongAsync, s => AddToPlaylistRequested?.Invoke(s));
+        new(song, _store, PlaySongAsync, s => AddToPlaylistRequested?.Invoke(s),
+            playNextHandler: s => { _ = _playback.PlayNextAsync(s); },
+            addToQueueHandler: s => { _ = _playback.EnqueueAsync(s); });
 
     private async Task PlaySongAsync(Song song)
     {
@@ -305,6 +353,16 @@ public partial class SearchViewModel : ObservableObject
     partial void OnHasSearchedChanged(bool value) => NotifyStateVisibility();
 
     partial void OnIsLoadingChanged(bool value) => NotifyStateVisibility();
+
+    partial void OnTopLoadFailedChanged(bool value) => NotifyStateVisibility();
+
+    partial void OnSongsLoadFailedChanged(bool value) => NotifyStateVisibility();
+
+    partial void OnAlbumsLoadFailedChanged(bool value) => NotifyStateVisibility();
+
+    partial void OnArtistsLoadFailedChanged(bool value) => NotifyStateVisibility();
+
+    partial void OnPlaylistsLoadFailedChanged(bool value) => NotifyStateVisibility();
 
     /// <summary>
     /// One typed result tab with accumulation-rule paging: the next

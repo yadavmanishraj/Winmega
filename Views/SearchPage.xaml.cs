@@ -92,9 +92,29 @@ public sealed partial class SearchPage : Page
 
     private void TopResults_ItemClick(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is SearchResultItemViewModel item && item.DetailArgs is { } args)
+        if (e.ClickedItem is not SearchResultItemViewModel item)
+        {
+            return;
+        }
+
+        if (item.DetailArgs is { } args)
         {
             Frame.Navigate(typeof(DetailPage), args);
+        }
+        else if (item.IsSong)
+        {
+            // Songs have no detail page (audit M6): a click on the
+            // row plays it, exactly like the row's play button —
+            // previously the click was a silent no-op.
+            _ = item.PlayCommand.ExecuteAsync(null);
+        }
+    }
+
+    private void SongRow_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is SongItemViewModel row)
+        {
+            row.PlayCommand.Execute(null);
         }
     }
 

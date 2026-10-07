@@ -51,6 +51,12 @@
                             <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
                                             IsEnabled="{x:Bind CanAddToPlaylist}"
                                             AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
+                            <MenuFlyoutItem x:Uid="PlayNextMenuItem" Command="{x:Bind PlayNextCommand}"
+                                            IsEnabled="{x:Bind CanPlayNext}"
+                                            AutomationProperties.AutomationId="SongPlayNextMenuItem" />
+                            <MenuFlyoutItem x:Uid="AddToQueueMenuItem" Command="{x:Bind AddToQueueCommand}"
+                                            IsEnabled="{x:Bind CanAddToQueue}"
+                                            AutomationProperties.AutomationId="SongAddToQueueMenuItem" />
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
@@ -156,7 +162,8 @@
                 <TextBlock x:Uid="SectionJumpBackIn" Style="{ThemeResource SubtitleTextBlockStyle}" />
                 <ListView ItemsSource="{x:Bind ViewModel.JumpBackInItems, Mode=OneWay}"
                           ItemTemplate="{StaticResource SongRowTemplate}"
-                          SelectionMode="None"
+                          SelectionMode="None" IsItemClickEnabled="True"
+                          ItemClick="SongRow_ItemClick"
                           AutomationProperties.AutomationId="HomeJumpBackInList" />
             </StackPanel>
 

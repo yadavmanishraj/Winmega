@@ -65,4 +65,12 @@ public sealed partial class DetailPage : Page
             Frame.Navigate(typeof(DetailPage), tile.DetailArgs);
         }
     }
+
+    private void SongRow_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is SongItemViewModel row)
+        {
+            row.PlayCommand.Execute(null);
+        }
+    }
 }
