@@ -78,6 +78,23 @@ public partial class ShellViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Endpoint status for the strip's dot + label. This is NOT a
+    /// live network probe (no probing infrastructure exists): the
+    /// shell drives it from the last playback outcome — true while
+    /// tracks load, false after a track failure (AUDIT_3 M2: the dot
+    /// used to be a static green ellipse, green even in a total
+    /// outage).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsEndpointReachable { get; set; } = true;
+
+    [ObservableProperty]
+    public partial string EndpointStatusText { get; set; } = "Direct · JioSaavn";
+
+    partial void OnIsEndpointReachableChanged(bool value) =>
+        EndpointStatusText = value ? "Direct · JioSaavn" : "Connection problem";
+
     [ObservableProperty]
     public partial string NowPlayingTitle { get; set; }
 

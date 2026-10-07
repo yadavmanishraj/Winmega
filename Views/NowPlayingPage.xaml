@@ -12,7 +12,7 @@
          stock transport chrome. Fluent posture: type-ramp styles,
          4px-grid spacing, theme resources for every colour, standard
          radii, no acrylic (transient surfaces only — the bar). -->
-    <ScrollViewer>
+    <ScrollViewer x:Name="PageScroller">
         <StackPanel Padding="24,24,24,24" Spacing="24"
                     MaxWidth="768" HorizontalAlignment="Center">
 
@@ -149,9 +149,14 @@
                 </Button>
             </StackPanel>
 
-            <!-- Secondary: playback speed + sleep timer (design §7.1) -->
+            <!-- Secondary: lyrics toggle + playback speed + sleep timer (design §7.1) -->
             <StackPanel Orientation="Horizontal" Spacing="8"
                         HorizontalAlignment="Center">
+                <ToggleButton x:Name="LyricsToggle" Content="Lyrics"
+                              Checked="LyricsToggle_Checked"
+                              Unchecked="LyricsToggle_Unchecked"
+                              AutomationProperties.AutomationId="NowPlayingLyrics"
+                              AutomationProperties.Name="Lyrics" />
                 <DropDownButton Content="Speed"
                                 AutomationProperties.AutomationId="NowPlayingSpeed"
                                 AutomationProperties.Name="Playback speed">
@@ -206,8 +211,28 @@
                 </DropDownButton>
             </StackPanel>
 
+            <!-- Lyrics: opened by the shell's Lyrics button (the page
+                 is navigated to with the "lyrics" parameter) or the
+                 in-page toggle below. Lines come from Core's
+                 lyrics.getLyrics via the page-local fetch in
+                 code-behind, gated on Song.HasLyrics; the panel says
+                 so plainly when a track has no lyrics instead of
+                 rendering an empty void. -->
+            <StackPanel x:Name="LyricsSection" Spacing="8" Visibility="Collapsed">
+                <TextBlock Text="Lyrics" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Name="LyricsStatusText"
+                           Style="{ThemeResource BodyTextBlockStyle}"
+                           Opacity="0.75"
+                           TextWrapping="Wrap"
+                           Visibility="Collapsed" />
+                <TextBlock x:Name="LyricsBodyText"
+                           Style="{ThemeResource BodyTextBlockStyle}"
+                           TextWrapping="Wrap"
+                           IsTextSelectionEnabled="True" />
+            </StackPanel>
+
             <!-- Queue: tap-to-jump, drag to reorder (design §9.5). -->
-            <StackPanel Spacing="8">
+            <StackPanel x:Name="QueueSection" Spacing="8">
                 <TextBlock Text="Queue" Style="{ThemeResource SubtitleTextBlockStyle}" />
                 <ListView x:Name="QueueList"
                           MaxHeight="480"
