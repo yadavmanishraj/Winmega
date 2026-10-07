@@ -561,12 +561,6 @@
   <data name="QueueEmptyBody" xml:space="preserve">
     <value>Songs you play or queue will line up here.</value>
   </data>
-  <data name="OpenNowPlaying" xml:space="preserve">
-    <value>Open Now Playing</value>
-  </data>
-  <data name="LyricsOpenNowPlaying" xml:space="preserve">
-    <value>Open in Now Playing</value>
-  </data>
   <data name="LyricsMetaFormat" xml:space="preserve">
     <value>{0} — {1}</value>
   </data>
