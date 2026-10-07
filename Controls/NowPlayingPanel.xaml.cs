@@ -82,6 +82,8 @@ public sealed partial class NowPlayingPanel : UserControl
         GripBorder.PointerExited += (_, _) => ProtectedCursor = null;
 
         PanelTitleText.Text = Res.Get("NowPlayingTitle");
+        IdleTitleText.Text = Res.Get("NowPlayingIdleTitle");
+        IdleBodyText.Text = Res.Get("NowPlayingIdleBody");
         SegmentQueueButton.Content = Res.Get("Queue");
         SegmentLyricsButton.Content = Res.Get("Lyrics");
         LyricsRetryButton.Content = Res.Get("LyricsRetry");
@@ -245,11 +247,20 @@ public sealed partial class NowPlayingPanel : UserControl
         });
 
         // The VM rebuilds its artwork image only on track change, so
-        // re-pointing the brush here is free on the 500 ms ticks.
-        ArtworkBrush.ImageSource = ViewModel.CurrentArtworkSource;
+        // re-pointing the image here is free on the 500 ms ticks.
+        ArtworkImage.Source = ViewModel.CurrentArtworkSource;
         ArtworkPlaceholder.Visibility = ViewModel.CurrentArtworkSource is null
             ? Visibility.Visible
             : Visibility.Collapsed;
+
+        // Idle swap (Manish, 2026-10-08): nothing current → the
+        // whole player body gives way to the placeholder; a song
+        // becoming current (or being cleared back to null) flips it
+        // here, in the same sync as everything else. A paused but
+        // loaded song is NOT idle — CurrentSong is non-null.
+        bool idle = ViewModel.CurrentSong is null;
+        PlayerContent.Visibility = idle ? Visibility.Collapsed : Visibility.Visible;
+        IdlePlaceholder.Visibility = idle ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void NowPlayingPanel_SizeChanged(object sender, SizeChangedEventArgs e)

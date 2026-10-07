@@ -59,48 +59,43 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Left segment (over the pane): back, wordmark, status. -->
+                <!-- Left segment (fixed 260 wide, never shrinks
+                     with the pane): pane toggle, back (only when
+                     navigation can go back), quiet wordmark. The
+                     endpoint status dot/label that used to sit here
+                     was removed (Manish, 2026-10-08): playback
+                     failure honesty lives in the failure bar + the
+                     player error surfaces, not a permanent label. -->
                 <Grid Grid.Column="0" ColumnSpacing="4" Padding="8,0,8,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Button x:Name="BackButton"
+                    <Button x:Name="PaneToggleButton"
                             Grid.Column="0"
-                            Width="40" Height="40" Padding="0"
+                            Width="32" Height="32" Padding="0"
                             Background="Transparent" BorderThickness="0"
                             VerticalAlignment="Center"
-                            IsEnabled="False"
+                            AutomationProperties.AutomationId="ShellPaneToggle"
+                            Click="PaneToggle_Click">
+                        <SymbolIcon Symbol="GlobalNavButton" Width="16" Height="16" />
+                    </Button>
+                    <Button x:Name="BackButton"
+                            Grid.Column="1"
+                            Width="32" Height="32" Padding="0"
+                            Background="Transparent" BorderThickness="0"
+                            VerticalAlignment="Center"
+                            IsEnabled="False" Visibility="Collapsed"
                             ToolTipService.ToolTip="Back"
                             AutomationProperties.AutomationId="ShellBack"
                             AutomationProperties.Name="Back"
                             Click="BackButton_Click">
-                        <SymbolIcon Symbol="Back" />
+                        <SymbolIcon Symbol="Back" Width="16" Height="16" />
                     </Button>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
-                                VerticalAlignment="Center">
-                        <SymbolIcon Symbol="MusicInfo"
-                                    Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                        <TextBlock x:Uid="AppWordmark"
-                                   Style="{ThemeResource SubtitleTextBlockStyle}"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
-                    <!-- Endpoint status (AUDIT_3 M2): the dot + label
-                         reflect the last playback outcome (green =
-                         direct upstream OK, caution = a track just
-                         failed), driven from ShellViewModel state in
-                         code-behind — not a decorative constant. -->
-                    <StackPanel x:Name="EndpointStatusPanel"
-                                Grid.Column="2" Orientation="Horizontal" Spacing="6"
-                                HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Ellipse x:Name="StatusDot" Width="10" Height="10"
-                                 Fill="{ThemeResource SystemFillColorSuccessBrush}"
-                                 VerticalAlignment="Center" />
-                        <TextBlock x:Name="EndpointStatusText" x:Uid="EndpointStatus"
-                                   Style="{ThemeResource CaptionTextBlockStyle}"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
+                    <TextBlock x:Uid="AppWordmark" Grid.Column="2"
+                               Style="{ThemeResource BodyStrongTextBlockStyle}"
+                               VerticalAlignment="Center" />
                 </Grid>
 
                 <!-- Transport cluster: binds PlayerViewModel (the page
@@ -117,7 +112,8 @@
                                   AutomationProperties.Name="Shuffle off">
                         <Grid>
                             <Ellipse x:Name="ShuffleDisc" Width="40" Height="40" />
-                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" Width="20" Height="20" />
+                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" Width="16" Height="16"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                             <Ellipse x:Name="ShuffleStateDot" Width="4" Height="4"
                                      HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                      Margin="0,0,0,4" Visibility="Collapsed"
@@ -129,7 +125,7 @@
                             ToolTipService.ToolTip="Previous"
                             AutomationProperties.AutomationId="TransportPrevious"
                             AutomationProperties.Name="Previous">
-                        <SymbolIcon Symbol="Previous" Width="20" Height="20"
+                        <SymbolIcon Symbol="Previous" Width="16" Height="16"
                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                     </Button>
                     <Button Style="{StaticResource StripTransportButtonStyle}"
@@ -139,7 +135,7 @@
                             ToolTipService.ToolTip="Play or pause"
                             AutomationProperties.AutomationId="NowPlayingPlayPause"
                             AutomationProperties.Name="Play or pause">
-                        <SymbolIcon Symbol="{x:Bind Player.PlayPauseSymbol, Mode=OneWay}" Width="20" Height="20"
+                        <SymbolIcon Symbol="{x:Bind Player.PlayPauseSymbol, Mode=OneWay}" Width="16" Height="16"
                                     Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
                     </Button>
                     <Button Style="{StaticResource StripTransportButtonStyle}"
@@ -147,7 +143,7 @@
                             ToolTipService.ToolTip="Next"
                             AutomationProperties.AutomationId="TransportNext"
                             AutomationProperties.Name="Next">
-                        <SymbolIcon Symbol="Next" Width="20" Height="20"
+                        <SymbolIcon Symbol="Next" Width="16" Height="16"
                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                     </Button>
                     <Button x:Name="RepeatButton"
@@ -158,7 +154,8 @@
                             AutomationProperties.Name="Repeat off">
                         <Grid>
                             <Ellipse x:Name="RepeatDisc" Width="40" Height="40" />
-                            <SymbolIcon x:Name="RepeatIcon" Width="20" Height="20"
+                            <SymbolIcon x:Name="RepeatIcon" Width="16" Height="16"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         Symbol="{x:Bind Player.RepeatSymbol, Mode=OneWay}" />
                             <Ellipse x:Name="RepeatStateDot" Width="4" Height="4"
                                      HorizontalAlignment="Center" VerticalAlignment="Bottom"
@@ -249,7 +246,7 @@
                                 <Button.Flyout>
                                     <MenuFlyout>
                                         <MenuFlyoutItem x:Uid="GoToNowPlaying"
-                                                        Click="NowPlayingOpen_Click" />
+                                                        Click="GoToNowPlayingMenuItem_Click" />
                                         <MenuFlyoutItem x:Uid="OpenQueue"
                                                         Click="OpenQueueMenuItem_Click" />
                                     </MenuFlyout>
@@ -671,20 +668,7 @@
                         IsPaneToggleButtonVisible="False"
                         IsSettingsVisible="False"
                         IsBackButtonVisible="Collapsed"
-                        ItemInvoked="ShellNav_ItemInvoked"
-                        SelectionChanged="ShellNav_SelectionChanged">
-            <NavigationView.PaneCustomContent>
-                <!-- THE search box of the app (spec §1/§5): SearchPage's
-                     own box is removed by WS2, so the SearchBox id lives
-                     exactly once, here. Submit-only: typing never
-                     navigates. -->
-                <AutoSuggestBox x:Name="SidebarSearch"
-                                x:Uid="SearchBox"
-                                Margin="12,8,12,4"
-                                QueryIcon="Find"
-                                AutomationProperties.AutomationId="SearchBox"
-                                QuerySubmitted="SidebarSearch_QuerySubmitted" />
-            </NavigationView.PaneCustomContent>
+                        ItemInvoked="ShellNav_ItemInvoked">
             <NavigationView.MenuItems>
                 <NavigationViewItem x:Name="NavHomeItem" x:Uid="NavHome" Tag="home"
                                     AutomationProperties.AutomationId="NavHome">
@@ -692,14 +676,13 @@
                         <SymbolIcon Symbol="Home" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!-- Now Playing opens the docked panel (it is not a
-                     page any more): the invoke is intercepted in
-                     code-behind and the row's selection is restored
-                     to the current section afterwards. -->
-                <NavigationViewItem x:Name="NavNowPlayingItem" x:Uid="NavNowPlaying" Tag="nowplaying"
-                                    AutomationProperties.AutomationId="NavNowPlaying">
+                <!-- Search is a plain section row (Manish,
+                     2026-10-08): the input itself lives at the top
+                     of SearchPage — no text field in the pane. -->
+                <NavigationViewItem x:Name="NavSearchItem" x:Uid="NavSearch" Tag="search"
+                                    AutomationProperties.AutomationId="NavSearch">
                     <NavigationViewItem.Icon>
-                        <SymbolIcon Symbol="Play" />
+                        <SymbolIcon Symbol="Search" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItemHeader x:Uid="SidebarLibraryHeader" />
