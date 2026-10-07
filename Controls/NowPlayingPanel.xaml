@@ -14,21 +14,89 @@
          disposes it after the close slide, so nothing stale survives
          inside.
 
-         Everything the page did lives here (feature parity):
-         sleep-timer chip, playback failure bar, artwork, seek with
-         the drag guard, the shared transport row, speed + sleep
-         menus. (The queue and lyrics segments that also lived here
-         were removed 2026-10-08 at Manish's direction — the strip
-         Queue/Lyrics flyouts are their home now.) Additions over
-         the page: a close button, a favourite heart for the current
-         song, a tappable artist byline, and the resize grip on the
-         left edge (drag = resize 288-520, double-click = reset; the
-         shell owns clamping + persistence).
+         Composition (direction A, NOW_PLAYING_POLISH §3, tightened
+         per Manish's sample corrections 2026-10-08): identity zone
+         pinned to the top (header, artwork, title block), controls
+         zone pinned to the BOTTOM (times + seek, transport, menus)
+         with deliberate air between them, so the transport never
+         moves between tracks, widths, or window heights. Transport
+         buttons are BARE GLYPHS — no discs or button backgrounds;
+         state reads from the accent glyph + a small state dot (the
+         strip's pattern). Only play/pause keeps its filled accent
+         disc. Behind everything sits the FX layer (NOW_PLAYING_FX):
+         a Composition host (FxHost) whose visuals paint the
+         palette-driven gradient / particles / pulse for the mode
+         read from settings at construction; mode Off leaves the
+         static HeroTintBrush treatment below untouched.
 
          Bindings are compiled {x:Bind} rooted at this control's own
          PlayerViewModel instance (transient, disposed with the
          panel — the page's lifecycle), never classic bindings and
          never a dictionary-hosted template (the D1 rule). -->
+    <UserControl.Resources>
+        <!-- Panel transport (Manish, 2026-10-08): bare glyphs at a
+             48px target — transparent rest, no border, no disc. The
+             Button keeps the platform template (hover/pressed are
+             transient interaction feedback); the ToggleButton gets a
+             minimal template because the stock one paints a checked
+             background, which would resurrect the disc exactly when
+             shuffle is on. On-state is painted from code-behind:
+             accent glyph + state dot. -->
+        <Style x:Key="PanelTransportButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="24" />
+        </Style>
+        <Style x:Key="PanelTransportToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="UseSystemFocusVisuals" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid x:Name="RootGrid" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              ContentTransitions="{TemplateBinding ContentTransitions}"
+                                              Padding="{TemplateBinding Padding}" />
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver" />
+                                    <VisualState x:Name="Pressed" />
+                                    <VisualState x:Name="Checked" />
+                                    <VisualState x:Name="CheckedPointerOver" />
+                                    <VisualState x:Name="CheckedPressed" />
+                                    <VisualState x:Name="Indeterminate" />
+                                    <VisualState x:Name="Disabled">
+                                        <VisualState.Setters>
+                                            <Setter Target="RootGrid.Opacity" Value="0.4" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="CheckedDisabled">
+                                        <VisualState.Setters>
+                                            <Setter Target="RootGrid.Opacity" Value="0.4" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Background="{ThemeResource LayerFillColorDefaultBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="8" />
@@ -58,15 +126,20 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
+            <!-- ===== FX host: an empty, input-transparent border
+                 spanning the whole card; the Composition layer is
+                 attached to it in code-behind (NowPlayingPanel.Fx.cs)
+                 and renders BEHIND the header and body. No background
+                 of its own — an unfilled border is not hit-testable,
+                 so it never intercepts input. When the FX mode is
+                 Off no visuals are attached and the tint borders
+                 below paint exactly as before. ===== -->
+            <Border x:Name="FxHost" Grid.Row="0" Grid.RowSpan="2" />
+
             <!-- ===== Header (always visible, even when idle):
-                 label, sleep chip, close. The artwork/title zone
-                 below it belongs to the player content, which the
-                 idle placeholder replaces wholesale when nothing is
-                 current (Manish, 2026-10-08). The two tint borders
-                 (header + artwork/title) share HeroTintBrush and sit
-                 flush, so the hero still reads as one zone. ===== -->
-            <Border Grid.Row="0" Background="{ThemeResource HeroTintBrush}">
-                <Grid Margin="20,12,12,0">
+                 label, sleep chip, close. ===== -->
+            <Border x:Name="HeaderTintBorder" Grid.Row="0" Background="{ThemeResource HeroTintBrush}">
+                <Grid Margin="24,12,12,6">
                     <!-- Header: label, sleep chip, close. -->
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
@@ -103,35 +176,43 @@
             </Border>
 
             <!-- ===== Player content: everything below the header.
-                 Collapsed wholesale when nothing is current; the
-                 idle placeholder (same root row) takes its place. -->
+                 Direction A rows: identity (Auto) / failure (Auto) /
+                 air (*) / controls (Auto). Collapsed wholesale when
+                 nothing is current; the idle placeholder (same root
+                 row) takes its place. -->
             <Grid x:Name="PlayerContent" Grid.Row="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-            <!-- ===== Hero zone: artwork, title ===== -->
-            <Border Grid.Row="0" Background="{ThemeResource HeroTintBrush}">
-                <Grid Margin="20,0,12,18">
+            <!-- ===== Identity zone: artwork, title ===== -->
+            <Border x:Name="HeroTintBorder" Grid.Row="0" Background="{ThemeResource HeroTintBrush}">
+                <Grid Margin="24,2,24,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <!-- Artwork: square, sized in code-behind from
-                         the panel width. A real Image element in a
-                         rounded Border — the app's proven artwork
-                         shape (Detail/Home/LCD). This surface used
-                         to paint through an ImageBrush background,
-                         which never rendered the fresh per-open
-                         BitmapImage: the placeholder collapsed
-                         (source non-null) over a brush that stayed
-                         empty, leaving a blank tint zone (bug,
-                         Manish 2026-10-08). -->
-                    <Grid x:Name="ArtworkHost" Grid.Row="0" Margin="0,10,8,0"
+                         the panel width (direction A rule). A real
+                         Image element in a rounded Border — the
+                         app's proven artwork shape (Detail/Home/LCD).
+                         This surface used to paint through an
+                         ImageBrush background, which never rendered
+                         the fresh per-open BitmapImage: the
+                         placeholder collapsed (source non-null) over
+                         a brush that stayed empty, leaving a blank
+                         tint zone (bug, Manish 2026-10-08). GlowHost
+                         is the Pulse mode's artwork glow anchor: an
+                         empty border oversized by a negative margin
+                         so its Composition visual spills softly
+                         around the artwork; inert in other modes. -->
+                    <Grid x:Name="ArtworkHost" Grid.Row="0"
                           HorizontalAlignment="Center">
+                        <Border x:Name="GlowHost" Margin="-30" />
                         <Border x:Name="ArtworkPlaceholder" CornerRadius="12"
                                 Background="{ThemeResource LayerFillColorAltBrush}">
                             <SymbolIcon Symbol="MusicInfo" Width="40" Height="40"
@@ -142,32 +223,41 @@
                         </Border>
                     </Grid>
 
-                    <!-- Title + tappable byline + favourite. -->
-                    <Grid Grid.Row="1" Margin="0,14,8,0" ColumnSpacing="4">
+                    <!-- Title + tappable byline + favourite. The
+                         title is ONE line at Title size (28) — long
+                         titles ellipsize instead of wrapping and
+                         shoving the byline around (polish N3). The
+                         heart is vertically centred on the title
+                         block, not floated against line one. -->
+                    <Grid Grid.Row="1" Margin="0,14,0,0" ColumnSpacing="4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Spacing="2">
+                        <StackPanel Grid.Column="0" Spacing="4">
                             <TextBlock Text="{x:Bind ViewModel.CurrentTitle, Mode=OneWay}"
-                                       Style="{ThemeResource SubtitleTextBlockStyle}"
+                                       Style="{ThemeResource TitleTextBlockStyle}"
+                                       MaxLines="1"
                                        TextTrimming="CharacterEllipsis" />
                             <StackPanel x:Name="BylinePanel" Orientation="Horizontal" />
                         </StackPanel>
                         <Button x:Name="FavoriteButton" Grid.Column="1"
                                 Width="40" Height="40" Padding="0"
                                 Background="Transparent" BorderThickness="0"
-                                VerticalAlignment="Top"
+                                VerticalAlignment="Center"
                                 Click="FavoriteButton_Click"
                                 AutomationProperties.AutomationId="NowPlayingFavorite">
-                            <FontIcon x:Name="FavoriteIcon" Glyph="&#xEB51;" FontSize="18" />
+                            <FontIcon x:Name="FavoriteIcon" Glyph="&#xEB51;" FontSize="20" />
                         </Button>
                     </Grid>
                 </Grid>
             </Border>
 
-            <!-- ===== Failure surface (the page's InfoBar, verbatim) ===== -->
-            <InfoBar Grid.Row="1" Margin="12,8,12,0"
+            <!-- ===== Failure surface (the page's InfoBar, verbatim).
+                 Lives with the identity zone it describes, so the
+                 bottom-anchored controls never jitter when it
+                 appears (polish §3). ===== -->
+            <InfoBar Grid.Row="1" Margin="24,8,24,0"
                      Title="Playback problem"
                      Severity="Warning"
                      IsOpen="{x:Bind ViewModel.HasPlaybackError, Mode=OneWay}"
@@ -182,12 +272,15 @@
                 </InfoBar.ActionButton>
             </InfoBar>
 
-            <!-- ===== Seek + transport + secondary ===== -->
-            <StackPanel Grid.Row="2" Margin="20,16,20,0" Spacing="10">
-                <!-- Seek: labels use tabular numerals so the layout
-                     never jitters; the slider's Value is driven from
+            <!-- ===== Controls zone: pinned to the panel's bottom
+                 edge by the * row above it. Times sit ABOVE the
+                 slider (direction A reading order); transport and
+                 menus follow at the samples' tightened rhythm. -->
+            <StackPanel Grid.Row="3" Margin="24,0,24,18">
+                <!-- Seek times: tabular numerals so the layout never
+                     jitters; the slider below is driven from
                      code-behind with the page's drag guard. -->
-                <Grid ColumnSpacing="12" VerticalAlignment="Center">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -196,44 +289,50 @@
                     <TextBlock Grid.Column="0"
                                Text="{x:Bind ViewModel.PositionText, Mode=OneWay}"
                                Style="{ThemeResource CaptionTextBlockStyle}"
-                               Typography.NumeralAlignment="Tabular"
-                               VerticalAlignment="Center" />
-                    <Slider x:Name="SeekSlider"
-                            Grid.Column="1"
-                            Minimum="0"
-                            Maximum="{x:Bind ViewModel.DurationSeconds, Mode=OneWay}"
-                            StepFrequency="1"
-                            VerticalAlignment="Center"
-                            AutomationProperties.AutomationId="NowPlayingSeek"
-                            AutomationProperties.Name="Seek"
-                            PointerPressed="SeekSlider_PointerPressed"
-                            PointerReleased="SeekSlider_PointerReleased"
-                            ValueChanged="SeekSlider_ValueChanged" />
+                               Typography.NumeralAlignment="Tabular" />
                     <TextBlock Grid.Column="2"
                                Text="{x:Bind ViewModel.DurationText, Mode=OneWay}"
                                Style="{ThemeResource CaptionTextBlockStyle}"
-                               Typography.NumeralAlignment="Tabular"
-                               VerticalAlignment="Center" />
+                               Typography.NumeralAlignment="Tabular" />
                 </Grid>
+                <Slider x:Name="SeekSlider"
+                        Minimum="0"
+                        Maximum="{x:Bind ViewModel.DurationSeconds, Mode=OneWay}"
+                        StepFrequency="1"
+                        VerticalAlignment="Center"
+                        AutomationProperties.AutomationId="NowPlayingSeek"
+                        AutomationProperties.Name="Seek"
+                        PointerPressed="SeekSlider_PointerPressed"
+                        PointerReleased="SeekSlider_PointerReleased"
+                        ValueChanged="SeekSlider_ValueChanged" />
 
-                <!-- Transport: the shared transport styles (App.xaml),
-                     the same discs the shell strip and the retired
-                     page use. -->
-                <StackPanel Orientation="Horizontal" Spacing="8"
+                <!-- Transport: bare glyphs (Manish, 2026-10-08).
+                     Shuffle/repeat on-state = accent glyph + state
+                     dot, painted in RefreshFromViewModel; only
+                     play/pause keeps the filled accent disc (the
+                     shared primary style). -->
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,8,0,0"
                             HorizontalAlignment="Center">
-                    <ToggleButton Style="{StaticResource TransportToggleButtonStyle}"
+                    <ToggleButton x:Name="ShuffleButton"
+                                  Style="{StaticResource PanelTransportToggleStyle}"
                                   IsChecked="{x:Bind ViewModel.IsShuffle, Mode=TwoWay}"
                                   ToolTipService.ToolTip="Shuffle"
                                   AutomationProperties.AutomationId="NowPlayingShuffle"
-                                  AutomationProperties.Name="Shuffle">
-                        <SymbolIcon Symbol="Shuffle" />
+                                  AutomationProperties.Name="Shuffle off">
+                        <Grid>
+                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" FontSize="20" />
+                            <Ellipse x:Name="ShuffleStateDot" Width="4" Height="4"
+                                     HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                     Margin="0,0,0,6" Visibility="Collapsed"
+                                     Fill="{ThemeResource TransportActiveBrush}" />
+                        </Grid>
                     </ToggleButton>
-                    <Button Style="{StaticResource TransportButtonStyle}"
+                    <Button Style="{StaticResource PanelTransportButtonStyle}"
                             Command="{x:Bind ViewModel.PreviousTrackCommand}"
                             ToolTipService.ToolTip="Previous"
                             AutomationProperties.AutomationId="NowPlayingPrevious"
                             AutomationProperties.Name="Previous track">
-                        <SymbolIcon Symbol="Previous" />
+                        <SymbolIcon Symbol="Previous" FontSize="20" />
                     </Button>
                     <Button Style="{StaticResource TransportPrimaryButtonStyle}"
                             Command="{x:Bind ViewModel.TogglePlayPauseCommand}"
@@ -242,27 +341,37 @@
                             AutomationProperties.Name="Play or pause">
                         <SymbolIcon Symbol="{x:Bind ViewModel.PlayPauseSymbol, Mode=OneWay}" Width="24" Height="24" />
                     </Button>
-                    <Button Style="{StaticResource TransportButtonStyle}"
+                    <Button Style="{StaticResource PanelTransportButtonStyle}"
                             Command="{x:Bind ViewModel.NextTrackCommand}"
                             ToolTipService.ToolTip="Next"
                             AutomationProperties.AutomationId="NowPlayingNext"
                             AutomationProperties.Name="Next track">
-                        <SymbolIcon Symbol="Next" />
+                        <SymbolIcon Symbol="Next" FontSize="20" />
                     </Button>
                     <Button x:Name="RepeatButton"
-                            Style="{StaticResource TransportButtonStyle}"
+                            Style="{StaticResource PanelTransportButtonStyle}"
                             Click="RepeatButton_Click"
                             AutomationProperties.AutomationId="NowPlayingRepeat"
                             AutomationProperties.Name="Repeat">
-                        <SymbolIcon x:Name="RepeatIcon" Symbol="RepeatAll" />
+                        <Grid>
+                            <SymbolIcon x:Name="RepeatIcon" Symbol="RepeatAll" FontSize="20" />
+                            <Ellipse x:Name="RepeatStateDot" Width="4" Height="4"
+                                     HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                     Margin="0,0,0,6" Visibility="Collapsed"
+                                     Fill="{ThemeResource TransportActiveBrush}" />
+                        </Grid>
                     </Button>
                 </StackPanel>
 
-                <!-- Secondary: playback speed + sleep timer (the
-                     page's menus, verbatim). -->
-                <StackPanel Orientation="Horizontal" Spacing="8"
+                <!-- Secondary: playback speed + sleep timer. The
+                     fill drops to the subtler secondary control
+                     fill so the menus stop outweighing the bare
+                     transport glyphs beside them (polish N6). -->
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0"
                             HorizontalAlignment="Center">
                     <DropDownButton Content="Speed"
+                                    Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                    BorderThickness="0"
                                     AutomationProperties.AutomationId="NowPlayingSpeed"
                                     AutomationProperties.Name="Playback speed">
                         <DropDownButton.Flyout>
@@ -289,6 +398,8 @@
                         </DropDownButton.Flyout>
                     </DropDownButton>
                     <DropDownButton Content="Sleep timer"
+                                    Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                    BorderThickness="0"
                                     AutomationProperties.AutomationId="NowPlayingSleepTimer"
                                     AutomationProperties.Name="Sleep timer">
                         <DropDownButton.Flyout>

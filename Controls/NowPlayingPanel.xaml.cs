@@ -37,6 +37,7 @@ namespace Omega.Controls;
 public sealed partial class NowPlayingPanel : UserControl
 {
     private readonly ILibraryStore _store;
+    private readonly ArtworkPaletteService _paletteService;
     private bool _isDraggingSeek;
     private bool _isRefreshingSeek;
     private bool _disposed;
@@ -45,6 +46,8 @@ public sealed partial class NowPlayingPanel : UserControl
     private uint? _gripPointerId;
     private double _gripStartX;
     private double _gripStartWidth;
+    private bool? _lastShuffleVisual;
+    private RepeatMode? _lastRepeatVisual;
 
     public NowPlayingPanel()
     {
@@ -53,6 +56,13 @@ public sealed partial class NowPlayingPanel : UserControl
         IServiceProvider services = ((App)Application.Current).Services;
         ViewModel = services.GetRequiredService<PlayerViewModel>();
         _store = services.GetRequiredService<ILibraryStore>();
+        _paletteService = services.GetRequiredService<ArtworkPaletteService>();
+
+        // The FX mode is read ONCE, here: changing the setting
+        // affects the next open, never a live panel (NOW_PLAYING_FX
+        // §3). The FX layer itself is built on Loaded, when the
+        // Composition visuals exist (NowPlayingPanel.Fx.cs).
+        _fxMode = ParseFxMode(SettingsViewModel.ReadNowPlayingFxMode());
         InitializeComponent();
 
         // Resize cursor over the grip strip. Border is sealed and
@@ -70,9 +80,17 @@ public sealed partial class NowPlayingPanel : UserControl
 
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         Unloaded += OnPanelUnloaded;
+        Loaded += OnPanelLoaded;
         RefreshFromViewModel();
         BuildByline();
         _ = RefreshFavoriteAsync();
+        _ = RefreshPaletteAsync();
+    }
+
+    private void OnPanelLoaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= OnPanelLoaded;
+        InitializeFx();
     }
 
     /// <summary>Player view model (bound via x:Bind; this panel's own transient instance).</summary>
@@ -109,6 +127,7 @@ public sealed partial class NowPlayingPanel : UserControl
         }
 
         _disposed = true;
+        TeardownFx();
         ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         ViewModel.Dispose();
     }
@@ -151,6 +170,7 @@ public sealed partial class NowPlayingPanel : UserControl
         {
             BuildByline();
             _ = RefreshFavoriteAsync();
+            _ = RefreshPaletteAsync();
         }
     }
 
@@ -172,6 +192,29 @@ public sealed partial class NowPlayingPanel : UserControl
             _ => "Repeat: off",
         });
 
+        // Bare-glyph transport state (Manish, 2026-10-08): with the
+        // discs gone, shuffle/repeat ON reads from the accent glyph
+        // + the state dot under it — the strip's pattern — plus the
+        // accessible name. Guarded by change: this sync runs on the
+        // 500 ms position ticks and must not repaint state it
+        // already shows.
+        if (_lastShuffleVisual != ViewModel.IsShuffle)
+        {
+            _lastShuffleVisual = ViewModel.IsShuffle;
+            bool on = ViewModel.IsShuffle;
+            ShuffleIcon.Foreground = on ? GetThemeBrush("TransportActiveBrush") : null;
+            ShuffleStateDot.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            AutomationProperties.SetName(ShuffleButton, on ? "Shuffle on" : "Shuffle off");
+        }
+
+        if (_lastRepeatVisual != ViewModel.RepeatMode)
+        {
+            _lastRepeatVisual = ViewModel.RepeatMode;
+            bool active = ViewModel.RepeatMode != RepeatMode.Off;
+            RepeatIcon.Foreground = active ? GetThemeBrush("TransportActiveBrush") : null;
+            RepeatStateDot.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         // The VM rebuilds its artwork image only on track change, so
         // re-pointing the image here is free on the 500 ms ticks.
         ArtworkImage.Source = ViewModel.CurrentArtworkSource;
@@ -187,14 +230,29 @@ public sealed partial class NowPlayingPanel : UserControl
         bool idle = ViewModel.CurrentSong is null;
         PlayerContent.Visibility = idle ? Visibility.Collapsed : Visibility.Visible;
         IdlePlaceholder.Visibility = idle ? Visibility.Visible : Visibility.Collapsed;
+
+        // FX sync (NowPlayingPanel.Fx.cs): idle parks the layer at
+        // the calm fallback; play state drives the Pulse amplitude.
+        // Both are change-guarded no-ops when the mode is Off or the
+        // layer is not built yet.
+        FxOnIdleChanged(idle);
+        FxOnPlayStateChanged(ViewModel.IsPlaying);
     }
 
     private void NowPlayingPanel_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        // Artwork = panel width minus the grip (8) and the hero
-        // zone's horizontal insets (20 + 12 + 8), capped so a
-        // stretched panel keeps a sane poster size.
-        double side = Math.Clamp(e.NewSize.Width - 48, 0, 400);
+        // Artwork (direction A, NOW_PLAYING_POLISH §3): the content
+        // column is the panel minus the grip (8) with symmetric
+        // 24-DIP insets, so side = clamp(W − 56, 232, 432) — the
+        // artwork now grows across the whole 288–520 resize range
+        // instead of stopping at 400. The height cap
+        // min(side, H − 424, floor 200) makes a short window shrink
+        // the poster before it can crush the bottom-anchored
+        // controls. During the open slide W sweeps up from 0, where
+        // the formula simply tracks the sweep (side ≤ 0 = unset).
+        double side = Math.Clamp(e.NewSize.Width - 56, 0, 432);
+        double heightCap = Math.Max(e.NewSize.Height - 424, 200);
+        side = Math.Min(side, heightCap);
         if (side > 0)
         {
             ArtworkHost.Width = side;
