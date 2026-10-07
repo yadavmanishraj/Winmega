@@ -345,7 +345,8 @@
                                   ZoomMode="Disabled"
                                   AutomationProperties.AutomationId="DetailTopAlbumsBand">
                         <ItemsRepeater ItemsSource="{x:Bind ViewModel.TopAlbums, Mode=OneWay}"
-                                       ItemTemplate="{StaticResource BandCardTemplate}">
+                                       ItemTemplate="{StaticResource BandCardTemplate}"
+                                       ElementPrepared="BandRepeater_ElementPrepared">
                             <ItemsRepeater.Layout>
                                 <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="1"
                                                    MinItemWidth="196" MinItemHeight="248" />
@@ -366,7 +367,8 @@
                                   ZoomMode="Disabled"
                                   AutomationProperties.AutomationId="DetailSinglesBand">
                         <ItemsRepeater ItemsSource="{x:Bind ViewModel.Singles, Mode=OneWay}"
-                                       ItemTemplate="{StaticResource BandCardTemplate}">
+                                       ItemTemplate="{StaticResource BandCardTemplate}"
+                                       ElementPrepared="BandRepeater_ElementPrepared">
                             <ItemsRepeater.Layout>
                                 <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="1"
                                                    MinItemWidth="196" MinItemHeight="248" />
@@ -388,7 +390,8 @@
                                   ZoomMode="Disabled"
                                   AutomationProperties.AutomationId="DetailDedicatedBand">
                         <ItemsRepeater ItemsSource="{x:Bind ViewModel.DedicatedPlaylists, Mode=OneWay}"
-                                       ItemTemplate="{StaticResource BandCardTemplate}">
+                                       ItemTemplate="{StaticResource BandCardTemplate}"
+                                       ElementPrepared="BandRepeater_ElementPrepared">
                             <ItemsRepeater.Layout>
                                 <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="1"
                                                    MinItemWidth="196" MinItemHeight="248" />
@@ -409,7 +412,8 @@
                                   ZoomMode="Disabled"
                                   AutomationProperties.AutomationId="DetailFeaturedBand">
                         <ItemsRepeater ItemsSource="{x:Bind ViewModel.FeaturedPlaylists, Mode=OneWay}"
-                                       ItemTemplate="{StaticResource BandCardTemplate}">
+                                       ItemTemplate="{StaticResource BandCardTemplate}"
+                                       ElementPrepared="BandRepeater_ElementPrepared">
                             <ItemsRepeater.Layout>
                                 <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="1"
                                                    MinItemWidth="196" MinItemHeight="248" />
@@ -452,7 +456,8 @@
                                   ZoomMode="Disabled"
                                   AutomationProperties.AutomationId="DetailSimilarBand">
                         <ItemsRepeater ItemsSource="{x:Bind ViewModel.SimilarArtists, Mode=OneWay}"
-                                       ItemTemplate="{StaticResource BandCardTemplate}">
+                                       ItemTemplate="{StaticResource BandCardTemplate}"
+                                       ElementPrepared="BandRepeater_ElementPrepared">
                             <ItemsRepeater.Layout>
                                 <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="1"
                                                    MinItemWidth="196" MinItemHeight="248" />
@@ -478,7 +483,8 @@
                                   ZoomMode="Disabled"
                                   AutomationProperties.AutomationId="DetailMoreByBand">
                         <ItemsRepeater ItemsSource="{x:Bind ViewModel.MoreByAlbums, Mode=OneWay}"
-                                       ItemTemplate="{StaticResource BandCardTemplate}">
+                                       ItemTemplate="{StaticResource BandCardTemplate}"
+                                       ElementPrepared="BandRepeater_ElementPrepared">
                             <ItemsRepeater.Layout>
                                 <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="1"
                                                    MinItemWidth="196" MinItemHeight="248" />

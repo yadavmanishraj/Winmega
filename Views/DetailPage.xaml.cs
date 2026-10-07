@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -90,6 +91,22 @@ public sealed partial class DetailPage : Page
         }
     }
 
+    // ActivateBandCard reads the item from the card root's
+    // DataContext — which ItemsRepeater, unlike ListView/GridView,
+    // NEVER assigns: its x:Bind templates render straight from the
+    // template engine's context while the element's DataContext
+    // property stays null, so a DataContext-reading handler silently
+    // no-ops (the Home card-tap defect, proven by pointer trace
+    // 2026-10-07 — every band card tap on this page was dead by the
+    // identical mechanism). SetElementItem closes that gap: every
+    // band repeater's ElementPrepared assigns the item as the
+    // element's DataContext (and re-assigns it when the element
+    // recycles to a new item). Do not remove those wirings — band
+    // card taps and Enter/Space activation depend on them. (The
+    // Latest Release card is a ContentControl, not a repeater:
+    // ContentControl DOES propagate its Content as the templated
+    // root's DataContext, so it needs no wiring.)
+
     private void BandCard_Tapped(object sender, TappedRoutedEventArgs e) =>
         ActivateBandCard(sender);
 
@@ -118,6 +135,34 @@ public sealed partial class DetailPage : Page
             !string.IsNullOrWhiteSpace(tile.Id))
         {
             Frame.Navigate(typeof(DetailPage), tile.DetailArgs);
+        }
+    }
+
+    /// <summary>
+    /// ElementPrepared for the band repeaters — the item assignment
+    /// is all they need for tap/keyboard activation (see
+    /// SetElementItem).
+    /// </summary>
+    private void BandRepeater_ElementPrepared(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args) =>
+        SetElementItem(sender, args);
+
+    /// <summary>
+    /// Assigns the item a realized band card element represents as
+    /// its DataContext. ItemsRepeater never does this itself (its
+    /// templates bind through the x:Bind template context, so cards
+    /// render correctly with a null DataContext) — but the Tapped /
+    /// KeyDown activation handlers identify the tapped card by its
+    /// DataContext, so without this every band card tap is a silent
+    /// no-op. ElementPrepared fires again when an element recycles
+    /// to a different index, keeping the assignment current.
+    /// </summary>
+    private static void SetElementItem(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args)
+    {
+        if (args.Element is FrameworkElement element
+            && sender.ItemsSource is IList items
+            && args.Index >= 0 && args.Index < items.Count)
+        {
+            element.DataContext = items[args.Index];
         }
     }
 }
