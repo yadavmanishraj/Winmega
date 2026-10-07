@@ -26,14 +26,22 @@ public partial class SongItemViewModel : ObservableObject
     private readonly Action<Song>? _addToPlaylistHandler;
     private readonly Func<SongItemViewModel, Task>? _removeHandler;
     private readonly Action<SongItemViewModel>? _favoriteChangedHandler;
+    private readonly Action<Song>? _playNextHandler;
+    private readonly Action<Song>? _addToQueueHandler;
 
+    // NOTE for the downloads workstream (FX3): append any download
+    // handler parameter AFTER addToQueueHandler so existing
+    // positional call sites keep compiling, mirroring the pattern
+    // below (CanDownload flag + a Download RelayCommand).
     public SongItemViewModel(
         Song song,
         ILibraryStore store,
         Func<Song, Task> playHandler,
         Action<Song>? addToPlaylistHandler = null,
         Func<SongItemViewModel, Task>? removeHandler = null,
-        Action<SongItemViewModel>? favoriteChangedHandler = null)
+        Action<SongItemViewModel>? favoriteChangedHandler = null,
+        Action<Song>? playNextHandler = null,
+        Action<Song>? addToQueueHandler = null)
     {
         Song = song;
         _store = store;
@@ -41,6 +49,8 @@ public partial class SongItemViewModel : ObservableObject
         _addToPlaylistHandler = addToPlaylistHandler;
         _removeHandler = removeHandler;
         _favoriteChangedHandler = favoriteChangedHandler;
+        _playNextHandler = playNextHandler;
+        _addToQueueHandler = addToQueueHandler;
     }
 
     public Song Song { get; }
@@ -54,6 +64,10 @@ public partial class SongItemViewModel : ObservableObject
     public ImageSource? Artwork => ArtworkHelper.From(Song.Image.Medium ?? Song.Image.Small);
 
     public bool CanAddToPlaylist => _addToPlaylistHandler is not null;
+
+    public bool CanPlayNext => _playNextHandler is not null;
+
+    public bool CanAddToQueue => _addToQueueHandler is not null;
 
     public bool CanRemove => _removeHandler is not null;
 
@@ -111,6 +125,12 @@ public partial class SongItemViewModel : ObservableObject
 
     [RelayCommand]
     private void AddToPlaylist() => _addToPlaylistHandler?.Invoke(Song);
+
+    [RelayCommand]
+    private void PlayNext() => _playNextHandler?.Invoke(Song);
+
+    [RelayCommand]
+    private void AddToQueue() => _addToQueueHandler?.Invoke(Song);
 
     [RelayCommand]
     private Task RemoveAsync() =>

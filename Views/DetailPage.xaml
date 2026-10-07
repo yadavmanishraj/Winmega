@@ -50,6 +50,12 @@
                             <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
                                             IsEnabled="{x:Bind CanAddToPlaylist}"
                                             AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
+                            <MenuFlyoutItem x:Uid="PlayNextMenuItem" Command="{x:Bind PlayNextCommand}"
+                                            IsEnabled="{x:Bind CanPlayNext}"
+                                            AutomationProperties.AutomationId="SongPlayNextMenuItem" />
+                            <MenuFlyoutItem x:Uid="AddToQueueMenuItem" Command="{x:Bind AddToQueueCommand}"
+                                            IsEnabled="{x:Bind CanAddToQueue}"
+                                            AutomationProperties.AutomationId="SongAddToQueueMenuItem" />
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
@@ -155,7 +161,8 @@
                 <TextBlock x:Name="SongsHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
                 <ListView ItemsSource="{x:Bind ViewModel.Songs, Mode=OneWay}"
                           ItemTemplate="{StaticResource SongRowTemplate}"
-                          SelectionMode="None"
+                          SelectionMode="None" IsItemClickEnabled="True"
+                          ItemClick="SongRow_ItemClick"
                           AutomationProperties.AutomationId="DetailSongsList" />
                 <Button x:Uid="LoadMoreButton" Command="{x:Bind ViewModel.LoadMoreSongsCommand}"
                         MinHeight="44" HorizontalAlignment="Left"
@@ -169,7 +176,8 @@
                 <TextBlock x:Uid="SinglesHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
                 <ListView ItemsSource="{x:Bind ViewModel.Singles, Mode=OneWay}"
                           ItemTemplate="{StaticResource SongRowTemplate}"
-                          SelectionMode="None"
+                          SelectionMode="None" IsItemClickEnabled="True"
+                          ItemClick="SongRow_ItemClick"
                           AutomationProperties.AutomationId="DetailSinglesList" />
             </StackPanel>
 

@@ -11,6 +11,7 @@ using Omega.Core.Upstream;
 using Windows.Media;
 using Windows.Media.Core;
 using Windows.Media.Playback;
+using Windows.Storage;
 using Windows.Storage.Streams;
 
 namespace Omega.Services;
@@ -43,7 +44,10 @@ public enum RepeatMode
 /// last rung is the best). Resolution "at play time" therefore means:
 /// a song arriving with NO ladder (or a ladder that fails end-to-end)
 /// is re-resolved through <see cref="JioSaavnClient.GetSongsByIdsAsync"/>
-/// before/while it plays.
+/// before/while it plays. The rung a track STARTS on honours the
+/// persisted stream-quality preference (see
+/// <see cref="PreferredRungIndex"/>); failures still descend from
+/// there per §7.2.
 ///
 /// Threading: constructed on the UI thread (first resolved from the
 /// composition root by the shell). Every public method is callable
@@ -63,7 +67,22 @@ public sealed partial class PlayerService : IPlaybackGateway, IDisposable
     private readonly DispatcherQueueTimer _positionTimer;
     private readonly DispatcherQueueTimer _sleepTimer;
 
-    /// <summary>Queue indices in play order (identity unless shuffled, design §7.1).</summary>
+    /// <summary>
+    /// Queue indices in play order (identity unless shuffled, design
+    /// §7.1). INVARIANT: always a permutation of the queue indices
+    /// 0..Queue.Count-1, and
+    /// the current track's position within it defines what Next /
+    /// Previous / auto-advance mean. Queue mutations therefore REMAP
+    /// this permutation (<see cref="RemapPlayOrder"/>); only two
+    /// operations rebuild it — toggling <see cref="Shuffle"/> and
+    /// starting a brand-new queue under shuffle. Rebuilding on an
+    /// in-place change (a ListView drag-reorder, an inserted song,
+    /// the resolved-copy swap in <see cref="ReplaceCurrentWith"/>)
+    /// would re-roll the shuffle mid-playback: already-heard tracks
+    /// could repeat, the upcoming sequence would silently change,
+    /// and the current track would land at a random position — the
+    /// audit-M3 desync.
+    /// </summary>
     private readonly List<int> _playOrder = new();
 
     private MediaSource? _currentSource;
@@ -218,6 +237,16 @@ public sealed partial class PlayerService : IPlaybackGateway, IDisposable
                         Queue.Add(item);
                     }
 
+                    // A brand-new queue is one of the two legitimate
+                    // play-order rebuilds (the other is toggling
+                    // Shuffle): with shuffle on, the fresh queue gets
+                    // a fresh shuffle instead of the identity order
+                    // the per-Add remap accumulated.
+                    if (_shuffle)
+                    {
+                        RebuildPlayOrder();
+                    }
+
                     int index = IndexOfSong(song.Id);
                     if (index < 0)
                     {
@@ -250,6 +279,109 @@ public sealed partial class PlayerService : IPlaybackGateway, IDisposable
             }
         });
         return completion.Task;
+    }
+
+    public Task PlayNextAsync(Song song)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Enqueue(() =>
+        {
+            try
+            {
+                InsertAfterCurrentCore(song);
+                completion.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                completion.TrySetException(ex);
+            }
+        });
+        return completion.Task;
+    }
+
+    public Task EnqueueAsync(Song song)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Enqueue(() =>
+        {
+            try
+            {
+                // By-id identity, like PlayAsync: a song already
+                // queued is not duplicated. The collection-changed
+                // remap appends the new index at the end of the play
+                // order, so it is heard last, shuffle included.
+                if (IndexOfSong(song.Id) < 0)
+                {
+                    Queue.Add(song);
+                }
+
+                completion.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                completion.TrySetException(ex);
+            }
+        });
+        return completion.Task;
+    }
+
+    /// <summary>
+    /// UI-thread only: makes <paramref name="song"/> the next thing
+    /// heard after the current track. The song is placed directly
+    /// behind the current track in the QUEUE (a queued instance is
+    /// moved, preserving its resolved ladder), and — the step that
+    /// makes it "next" under shuffle too — its entry in
+    /// <c>_playOrder</c> is moved directly behind the current track's
+    /// entry. The collection-changed remap alone would append it at
+    /// the end of the play order.
+    /// </summary>
+    private void InsertAfterCurrentCore(Song song)
+    {
+        if (CurrentSong is null || _currentIndex < 0)
+        {
+            // Nothing loaded: "play next" degenerates to "play now",
+            // within the existing queue when the song is in it (the
+            // PlayAsync no-queue semantics).
+            int existing = IndexOfSong(song.Id);
+            if (existing >= 0)
+            {
+                StartTrackCore(existing);
+            }
+            else
+            {
+                Queue.Clear();
+                Queue.Add(song);
+                StartTrackCore(0);
+            }
+
+            return;
+        }
+
+        int queuedIndex = IndexOfSong(song.Id);
+        if (queuedIndex == _currentIndex)
+        {
+            return; // Already the current track.
+        }
+
+        Song toInsert = song;
+        if (queuedIndex >= 0)
+        {
+            // Move the queued instance (it may already carry a
+            // resolved ladder); each mutation's remap keeps
+            // _currentIndex following CurrentSong by reference.
+            toInsert = Queue[queuedIndex];
+            Queue.RemoveAt(queuedIndex);
+        }
+
+        int insertAt = _currentIndex + 1;
+        Queue.Insert(insertAt, toInsert);
+
+        // The remap appended insertAt at the end of _playOrder; move
+        // it directly behind the current track's play-order slot.
+        _playOrder.Remove(insertAt);
+        int orderPosition = _playOrder.IndexOf(_currentIndex);
+        _playOrder.Insert(orderPosition + 1, insertAt);
+        RaiseStateChanged();
     }
 
     /// <summary>Tap-to-jump from the queue UI.</summary>
@@ -384,7 +516,7 @@ public sealed partial class PlayerService : IPlaybackGateway, IDisposable
                     }
 
                     ReplaceCurrentWith(fresh);
-                    _ladderIndex = fresh.StreamUrls.Count - 1;
+                    _ladderIndex = PreferredRungIndex(fresh);
                     ApplyRung(generation);
                 });
                 return;
@@ -401,7 +533,7 @@ public sealed partial class PlayerService : IPlaybackGateway, IDisposable
                 return;
             }
 
-            _ladderIndex = CurrentSong.StreamUrls.Count - 1;
+            _ladderIndex = PreferredRungIndex(CurrentSong);
             ApplyRung(generation);
         });
     }
@@ -465,7 +597,7 @@ public sealed partial class PlayerService : IPlaybackGateway, IDisposable
                     }
 
                     ReplaceCurrentWith(fresh);
-                    _ladderIndex = fresh.StreamUrls.Count - 1;
+                    _ladderIndex = PreferredRungIndex(fresh);
                     ApplyRung(generation);
                 });
                 return;
@@ -511,6 +643,89 @@ public sealed partial class PlayerService : IPlaybackGateway, IDisposable
             // no logging infrastructure in the app yet to report to.
             return null;
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Stream-quality preference (Settings §9.6 — audit M1/B2: the
+    // setting was persisted but never read, so playback always took
+    // the top rung). The value lives in LocalSettings under the key
+    // SettingsViewModel writes (StreamQualityKey); it is read lazily
+    // at every track start so a Settings change applies from the
+    // next track without restarting the app or rebuilding this
+    // service. "Auto" (and anything unrecognised) keeps the historic
+    // behaviour: start at the top rung. A fixed label picks the
+    // highest rung at or below the requested rate (ladders vary per
+    // song), and the §7.2 failure ladder still descends from there.
+    // ------------------------------------------------------------------
+
+    private const string StreamQualitySettingsKey = "StreamQuality";
+
+    private static string ReadStreamQualityPreference()
+    {
+        try
+        {
+            return ApplicationData.Current.LocalSettings.Values
+                .TryGetValue(StreamQualitySettingsKey, out object? value) &&
+                value is string text
+                ? text
+                : "Auto";
+        }
+        catch (Exception)
+        {
+            // Unpackaged dev runs have no LocalSettings (same fallback
+            // SettingsViewModel uses) — behave as "Auto".
+            return "Auto";
+        }
+    }
+
+    /// <summary>The ladder rung a track starts on, honouring the persisted quality preference.</summary>
+    private static int PreferredRungIndex(Song song)
+    {
+        IReadOnlyList<QualityUrl> ladder = song.StreamUrls;
+        if (ladder.Count == 0)
+        {
+            return -1;
+        }
+
+        string preference = ReadStreamQualityPreference();
+        if (!TryParseKbps(preference, out int kbps))
+        {
+            // "Auto" or an unknown label: the top rung.
+            return ladder.Count - 1;
+        }
+
+        // The ladder ascends by rate; take the highest rung that does
+        // not exceed the request (never upscale beyond what the user
+        // asked for). A request below the lowest rung still yields
+        // that rung — the song must play *somehow*.
+        int best = 0;
+        for (int i = 0; i < ladder.Count; i++)
+        {
+            if (ladder[i].Kbps <= kbps)
+            {
+                best = i;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>Parses a ladder label like "96kbps" into its rate; false for "Auto"/junk.</summary>
+    private static bool TryParseKbps(string label, out int kbps)
+    {
+        kbps = 0;
+        int digits = 0;
+        while (digits < label.Length && char.IsDigit(label[digits]))
+        {
+            digits++;
+        }
+
+        return digits > 0 &&
+            int.TryParse(label.AsSpan(0, digits), out kbps);
     }
 
     /// <summary>UI-thread only: swaps the current queue entry for its freshly resolved copy.</summary>
@@ -639,8 +854,97 @@ public sealed partial class PlayerService : IPlaybackGateway, IDisposable
             }
         }
 
-        RebuildPlayOrder();
+        RemapPlayOrder(e);
         RaiseStateChanged();
+    }
+
+    /// <summary>
+    /// UI-thread only: adjusts <see cref="_playOrder"/> for one queue
+    /// mutation, preserving every entry's relative play position —
+    /// indices shift exactly the way the queue slots they name
+    /// shifted, removed slots drop out, and added slots join at the
+    /// END of the play order (callers with stronger placement needs,
+    /// like play-next, reposition the entry afterwards). Together
+    /// with the by-reference current-index tracking above, this keeps
+    /// Next / Previous / auto-advance anchored to the track actually
+    /// playing across drag-reorders (audit M3).
+    /// </summary>
+    private void RemapPlayOrder(NotifyCollectionChangedEventArgs e)
+    {
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add:
+            {
+                int insertAt = e.NewStartingIndex;
+                int added = e.NewItems?.Count ?? 0;
+                for (int i = 0; i < _playOrder.Count; i++)
+                {
+                    if (_playOrder[i] >= insertAt)
+                    {
+                        _playOrder[i] += added;
+                    }
+                }
+
+                for (int slot = insertAt; slot < insertAt + added; slot++)
+                {
+                    _playOrder.Add(slot);
+                }
+
+                break;
+            }
+
+            case NotifyCollectionChangedAction.Remove:
+            {
+                int removedAt = e.OldStartingIndex;
+                int removed = e.OldItems?.Count ?? 0;
+                _playOrder.RemoveAll(slot =>
+                    slot >= removedAt && slot < removedAt + removed);
+                for (int i = 0; i < _playOrder.Count; i++)
+                {
+                    if (_playOrder[i] >= removedAt + removed)
+                    {
+                        _playOrder[i] -= removed;
+                    }
+                }
+
+                break;
+            }
+
+            case NotifyCollectionChangedAction.Move:
+            {
+                int from = e.OldStartingIndex;
+                int to = e.NewStartingIndex;
+                for (int i = 0; i < _playOrder.Count; i++)
+                {
+                    int slot = _playOrder[i];
+                    if (slot == from)
+                    {
+                        _playOrder[i] = to;
+                    }
+                    else if (from < to && slot > from && slot <= to)
+                    {
+                        _playOrder[i] = slot - 1;
+                    }
+                    else if (to < from && slot >= to && slot < from)
+                    {
+                        _playOrder[i] = slot + 1;
+                    }
+                }
+
+                break;
+            }
+
+            case NotifyCollectionChangedAction.Replace:
+                // Same slots, new instances — the permutation of
+                // indices is unaffected.
+                break;
+
+            case NotifyCollectionChangedAction.Reset:
+                // Queue cleared; the Adds that follow rebuild the
+                // permutation slot by slot.
+                _playOrder.Clear();
+                break;
+        }
     }
 
     private void RebuildPlayOrder()

@@ -293,7 +293,9 @@ public partial class DetailViewModel : ObservableObject
     }
 
     private SongItemViewModel MakeRow(Song song, Func<IReadOnlyList<Song>> queueProvider) =>
-        new(song, _store, s => PlaySongAsync(s, queueProvider()), s => AddToPlaylistRequested?.Invoke(s));
+        new(song, _store, s => PlaySongAsync(s, queueProvider()), s => AddToPlaylistRequested?.Invoke(s),
+            playNextHandler: s => { _ = _playback.PlayNextAsync(s); },
+            addToQueueHandler: s => { _ = _playback.EnqueueAsync(s); });
 
     private async Task PlaySongAsync(Song song, IReadOnlyList<Song> queue)
     {
