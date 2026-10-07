@@ -1,0 +1,96 @@
+<UserControl
+    x:Class="Omega.Controls.SongRow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- THE shared song row (AUDIT_2 §8.1): one row for every song
+         list in the app (Home, Search, Library, Detail) — the four
+         page-local copies had diverged, and the inline Button.Flyout
+         pattern failed under real pointer input (POINTER_QA F4).
+         Structural rules: favourite and More are sibling buttons on
+         their own Auto columns (44px each, 12px spacing, no shared
+         cell, no overlap); Play is also on the artwork (hover disc),
+         so the menu is never the only route to play.
+         WHY A USERCONTROL (D1): this markup previously lived in a
+         DataTemplate hosted by a standalone merged ResourceDictionary
+         (Templates/SongRowTemplates.xaml). Its bindings never
+         evaluated at runtime in EITHER flavour — compiled (x:Bind)
+         rows rendered as empty shells (POINTER_QA2), and after the
+         classic-Binding conversion Manish's own screenshot of the
+         Detail page still showed rows with only the hard-coded
+         glyphs and every bound element (artwork, title, artist,
+         duration, heart) empty. Bindings in that dictionary host do
+         not resolve against the item. A UserControl is the standard
+         codegen-proven host for a reusable row (same model as a
+         Page): pages hand it the item through the ViewModel
+         dependency property, and the code-behind forwards it to
+         DataContext, so the classic bindings below resolve against
+         the row item itself. Do not move this back into a shared
+         ResourceDictionary template. -->
+    <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="48" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Grid Width="48" Height="48">
+            <Image Source="{Binding Artwork}" Width="48" Height="48" Stretch="UniformToFill"
+                   AutomationProperties.AccessibilityView="Raw" />
+            <Button Width="28" Height="28" Padding="0" CornerRadius="14"
+                    HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                    Background="{ThemeResource ControlFillColorDefaultBrush}"
+                    BorderThickness="0"
+                    Command="{Binding PlayCommand}"
+                    AutomationProperties.AutomationId="SongArtworkPlayButton"
+                    AutomationProperties.Name="Play">
+                <FontIcon Glyph="&#xE768;" FontSize="12" />
+            </Button>
+        </Grid>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+            <TextBlock Text="{Binding Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Artists}" Style="{StaticResource SecondaryCaptionStyle}"
+                       TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+        <TextBlock Grid.Column="2" Text="{Binding DurationText}"
+                   Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+        <Button Grid.Column="3" Style="{StaticResource IconButtonStyle}"
+                Command="{Binding ToggleFavoriteCommand}"
+                AutomationProperties.AutomationId="SongFavoriteButton"
+                AutomationProperties.Name="{Binding FavoriteMenuText, Mode=OneWay}">
+            <FontIcon Glyph="{Binding FavoriteGlyph, Mode=OneWay}" FontSize="18" />
+        </Button>
+        <Button Grid.Column="4" Style="{StaticResource IconButtonStyle}"
+                AutomationProperties.AutomationId="SongMoreButton"
+                AutomationProperties.Name="{Binding MoreActionsName}">
+            <FontIcon Glyph="&#xE712;" FontSize="18" />
+            <Button.Flyout>
+                <MenuFlyout>
+                    <MenuFlyoutItem x:Uid="PlayMenuItem" Command="{Binding PlayCommand}"
+                                    AutomationProperties.AutomationId="SongPlayMenuItem" />
+                    <MenuFlyoutItem x:Uid="PlayNextMenuItem" Command="{Binding PlayNextCommand}"
+                                    Visibility="{Binding CanPlayNext, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    AutomationProperties.AutomationId="SongPlayNextMenuItem" />
+                    <MenuFlyoutItem x:Uid="AddToQueueMenuItem" Command="{Binding AddToQueueCommand}"
+                                    Visibility="{Binding CanAddToQueue, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    AutomationProperties.AutomationId="SongAddToQueueMenuItem" />
+                    <MenuFlyoutItem Text="{Binding FavoriteMenuText}"
+                                    Command="{Binding ToggleFavoriteCommand}"
+                                    AutomationProperties.AutomationId="SongFavoriteMenuItem" />
+                    <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{Binding AddToPlaylistCommand}"
+                                    IsEnabled="{Binding CanAddToPlaylist}"
+                                    AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
+                    <MenuFlyoutItem x:Uid="DownloadMenuItem" Command="{Binding DownloadCommand}"
+                                    Visibility="{Binding CanDownload, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    AutomationProperties.AutomationId="SongDownloadMenuItem" />
+                    <MenuFlyoutItem Text="{Binding RemoveMenuText}"
+                                    Command="{Binding RemoveCommand}"
+                                    Visibility="{Binding CanRemove, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    AutomationProperties.AutomationId="SongRemoveMenuItem" />
+                </MenuFlyout>
+            </Button.Flyout>
+        </Button>
+    </Grid>
+</UserControl>
