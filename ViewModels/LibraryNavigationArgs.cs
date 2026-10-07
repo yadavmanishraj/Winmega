@@ -11,6 +11,12 @@ public sealed record LibraryNavigationArgs(string Tab, string? PlaylistId = null
 {
     public static LibraryNavigationArgs Favorites() => new("favorites");
 
+    public static LibraryNavigationArgs Artists() => new("artists");
+
+    public static LibraryNavigationArgs Albums() => new("albums");
+
+    public static LibraryNavigationArgs Songs() => new("songs");
+
     public static LibraryNavigationArgs Playlists(string? playlistId = null) => new("playlists", playlistId);
 
     public static LibraryNavigationArgs History() => new("history");
