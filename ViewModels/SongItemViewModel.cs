@@ -18,7 +18,14 @@ namespace Omega.ViewModels;
 ///
 /// AOT rule (MVVMTK0045): [ObservableProperty] on PARTIAL PROPERTIES
 /// only — never the field form.
+///
+/// The [Bindable] attribute is required by the shared song-row
+/// template (Templates/SongRowTemplates.xaml): it binds with classic
+/// {Binding} + x:DataType (D1 — compiled bindings resolved against a
+/// null source at runtime in that dictionary), and [Bindable] is
+/// what keeps those bindings AOT/trim-clean (no WMC1510).
 /// </summary>
+[Microsoft.UI.Xaml.Data.Bindable]
 public partial class SongItemViewModel : ObservableObject
 {
     private readonly ILibraryStore _store;
