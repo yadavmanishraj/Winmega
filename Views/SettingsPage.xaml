@@ -4,18 +4,18 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Settings (design §9.6): grouped card rows, persisted
-         immediately. Card surfaces use the Fluent card theme brushes
-         and the standard 8px card radius; theme switch applies to
-         the root element via App.ApplyThemeMode. -->
+         immediately. Cards use the shared CardStyle (App.xaml);
+         theme switch applies to the root element via
+         App.ApplyThemeMode. Column rule (AUDIT_2 V-15): forms are
+         left-aligned at 760 — the player centres, feeds run
+         full-bleed. -->
     <ScrollViewer>
         <StackPanel Padding="24,24,24,24" Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
-            <TextBlock x:Uid="SettingsTitle" Style="{ThemeResource TitleTextBlockStyle}" />
-            <TextBlock x:Uid="SettingsSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
+            <TextBlock x:Uid="SettingsTitle" Style="{StaticResource PageTitleStyle}" />
+            <TextBlock x:Uid="SettingsSubtitle" Style="{StaticResource SecondaryTextStyle}" />
 
             <!-- Appearance -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="16">
+            <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="12">
                     <TextBlock x:Uid="AppearanceHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
                     <TextBlock x:Uid="ThemeLabel" Style="{ThemeResource BodyStrongTextBlockStyle}" />
@@ -33,9 +33,7 @@
             </Border>
 
             <!-- Playback -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="16">
+            <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="12">
                     <TextBlock x:Uid="PlaybackHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
                     <TextBlock x:Uid="QualityLabel" Style="{ThemeResource BodyStrongTextBlockStyle}" />
@@ -43,20 +41,17 @@
                               SelectedIndex="{x:Bind ViewModel.SelectedQualityIndex, Mode=TwoWay}"
                               MinWidth="280" HorizontalAlignment="Left"
                               AutomationProperties.AutomationId="SettingsQualityCombo" />
-                    <TextBlock x:Uid="QualityNote" Style="{ThemeResource CaptionTextBlockStyle}"
-                               Opacity="0.75" TextWrapping="Wrap" />
+                    <TextBlock x:Uid="QualityNote" Style="{StaticResource SecondaryCaptionStyle}"
+                               TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
 
             <TextBlock x:Uid="SettingsEndpointNote"
-                       Style="{ThemeResource CaptionTextBlockStyle}"
-                       Opacity="0.75"
+                       Style="{StaticResource SecondaryCaptionStyle}"
                        TextWrapping="Wrap" />
 
             <!-- About -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="16">
+            <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="8">
                     <TextBlock x:Uid="AboutHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
                     <TextBlock Text="{x:Bind ViewModel.AppName}"

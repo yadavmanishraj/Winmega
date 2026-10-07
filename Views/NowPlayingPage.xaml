@@ -11,24 +11,26 @@
          code-behind via SetMediaPlayer), custom transport — never the
          stock transport chrome. Fluent posture: type-ramp styles,
          4px-grid spacing, theme resources for every colour, standard
-         radii, no acrylic (transient surfaces only — the bar). -->
+         radii, no acrylic (transient surfaces only — the bar).
+         Column rule (AUDIT_2 V-15): the player column is centred;
+         forms (Settings) are left-aligned; feeds run full-bleed.
+         No page title here (V-13): the shell strip's LCD well already
+         names this context. -->
     <ScrollViewer x:Name="PageScroller">
         <StackPanel Padding="24,24,24,24" Spacing="24"
                     MaxWidth="768" HorizontalAlignment="Center">
 
-            <!-- Header + sleep-timer chip -->
+            <!-- Sleep-timer chip (the redundant "Now Playing" title is
+                 gone — V-13) -->
             <Grid ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Now Playing"
-                           Style="{ThemeResource TitleTextBlockStyle}"
-                           VerticalAlignment="Center" />
                 <Border Grid.Column="1"
                         VerticalAlignment="Center"
                         Padding="12,4"
-                        CornerRadius="{ThemeResource ControlCornerRadius}"
+                        CornerRadius="{StaticResource CardCornerRadius}"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1"
@@ -66,8 +68,7 @@
                            Style="{ThemeResource SubtitleTextBlockStyle}"
                            TextTrimming="CharacterEllipsis" />
                 <TextBlock Text="{x:Bind ViewModel.CurrentArtist, Mode=OneWay}"
-                           Style="{ThemeResource BodyTextBlockStyle}"
-                           Opacity="0.75"
+                           Style="{StaticResource SecondaryTextStyle}"
                            TextTrimming="CharacterEllipsis" />
             </StackPanel>
 
@@ -103,36 +104,33 @@
                            VerticalAlignment="Center" />
             </Grid>
 
-            <!-- Transport: shuffle / previous / 64px primary / next / repeat -->
+            <!-- Transport: shuffle / previous / 64px primary / next /
+                 repeat — the shared transport styles (App.xaml), the
+                 same discs the shell strip uses (AUDIT_2 V-03). -->
             <StackPanel Orientation="Horizontal" Spacing="8"
                         HorizontalAlignment="Center">
-                <ToggleButton Width="48" Height="48" Padding="0"
-                              CornerRadius="24"
+                <ToggleButton Style="{StaticResource TransportToggleButtonStyle}"
                               IsChecked="{x:Bind ViewModel.IsShuffle, Mode=TwoWay}"
                               ToolTipService.ToolTip="Shuffle"
                               AutomationProperties.AutomationId="NowPlayingShuffle"
                               AutomationProperties.Name="Shuffle">
                     <SymbolIcon Symbol="Shuffle" />
                 </ToggleButton>
-                <Button Width="48" Height="48" Padding="0"
-                        CornerRadius="24"
+                <Button Style="{StaticResource TransportButtonStyle}"
                         Command="{x:Bind ViewModel.PreviousTrackCommand}"
                         ToolTipService.ToolTip="Previous"
                         AutomationProperties.AutomationId="NowPlayingPrevious"
                         AutomationProperties.Name="Previous track">
                     <SymbolIcon Symbol="Previous" />
                 </Button>
-                <Button Width="64" Height="64" Padding="0"
-                        CornerRadius="32"
-                        Background="{ThemeResource AccentFillColorDefaultBrush}"
+                <Button Style="{StaticResource TransportPrimaryButtonStyle}"
                         Command="{x:Bind ViewModel.TogglePlayPauseCommand}"
                         ToolTipService.ToolTip="Play or pause"
                         AutomationProperties.AutomationId="NowPlayingPagePlayPause"
                         AutomationProperties.Name="Play or pause">
                     <SymbolIcon Symbol="{x:Bind ViewModel.PlayPauseSymbol, Mode=OneWay}" Width="24" Height="24" />
                 </Button>
-                <Button Width="48" Height="48" Padding="0"
-                        CornerRadius="24"
+                <Button Style="{StaticResource TransportButtonStyle}"
                         Command="{x:Bind ViewModel.NextTrackCommand}"
                         ToolTipService.ToolTip="Next"
                         AutomationProperties.AutomationId="NowPlayingNext"
@@ -140,8 +138,7 @@
                     <SymbolIcon Symbol="Next" />
                 </Button>
                 <Button x:Name="RepeatButton"
-                        Width="48" Height="48" Padding="0"
-                        CornerRadius="24"
+                        Style="{StaticResource TransportButtonStyle}"
                         Click="RepeatButton_Click"
                         AutomationProperties.AutomationId="NowPlayingRepeat"
                         AutomationProperties.Name="Repeat">
@@ -221,8 +218,7 @@
             <StackPanel x:Name="LyricsSection" Spacing="8" Visibility="Collapsed">
                 <TextBlock Text="Lyrics" Style="{ThemeResource SubtitleTextBlockStyle}" />
                 <TextBlock x:Name="LyricsStatusText"
-                           Style="{ThemeResource BodyTextBlockStyle}"
-                           Opacity="0.75"
+                           Style="{StaticResource SecondaryTextStyle}"
                            TextWrapping="Wrap"
                            Visibility="Collapsed" />
                 <TextBlock x:Name="LyricsBodyText"
@@ -254,11 +250,10 @@
                                 <SymbolIcon Symbol="MusicInfo" VerticalAlignment="Center" />
                                 <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
                                     <TextBlock Text="{x:Bind Name}"
-                                               Style="{ThemeResource BodyTextBlockStyle}"
+                                               Style="{ThemeResource BodyStrongTextBlockStyle}"
                                                TextTrimming="CharacterEllipsis" />
                                     <TextBlock Text="{x:Bind PrimaryArtistNames}"
-                                               Style="{ThemeResource CaptionTextBlockStyle}"
-                                               Opacity="0.75"
+                                               Style="{StaticResource SecondaryCaptionStyle}"
                                                TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                             </Grid>

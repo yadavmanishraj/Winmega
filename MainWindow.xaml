@@ -250,8 +250,7 @@
                                                    TextTrimming="CharacterEllipsis" />
                                         <TextBlock x:Name="LcdArtistText"
                                                    Text="{x:Bind Player.CurrentArtist, Mode=OneWay}"
-                                                   Style="{ThemeResource CaptionTextBlockStyle}"
-                                                   Opacity="0.75"
+                                                   Style="{StaticResource SecondaryCaptionStyle}"
                                                    TextAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" />
                                     </StackPanel>

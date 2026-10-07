@@ -67,7 +67,7 @@
     <value>Omega</value>
   </data>
   <data name="EndpointStatus.Text" xml:space="preserve">
-    <value>Direct · JioSaavn</value>
+    <value>JioSaavn</value>
   </data>
   <data name="HomeTitle.Text" xml:space="preserve">
     <value>Home</value>
@@ -82,25 +82,25 @@
     <value>Songs, albums, artists and playlists.</value>
   </data>
   <data name="SearchBox.PlaceholderText" xml:space="preserve">
-    <value>Search songs, albums, artists…</value>
+    <value>Search music…</value>
   </data>
   <data name="LibraryTitle.Text" xml:space="preserve">
     <value>Library</value>
   </data>
   <data name="LibrarySubtitle.Text" xml:space="preserve">
-    <value>Favourites, downloads, history and your playlists live here — on this PC only.</value>
+    <value>Favorites, downloads, history and your playlists live here — on this PC only.</value>
   </data>
   <data name="SettingsTitle.Text" xml:space="preserve">
     <value>Settings</value>
   </data>
   <data name="SettingsSubtitle.Text" xml:space="preserve">
-    <value>Appearance, playback, downloads and advanced options.</value>
+    <value>Appearance and playback.</value>
   </data>
   <data name="AccentSwatchLabel.Text" xml:space="preserve">
-    <value>Play-green accent #3BE477</value>
+    <value>Accent color</value>
   </data>
   <data name="SettingsEndpointNote.Text" xml:space="preserve">
-    <value>API endpoint: https://www.jiosaavn.com/api.php — direct upstream. The advanced override field lands with the full Settings implementation.</value>
+    <value>Music streams directly from JioSaavn.</value>
   </data>
 
   <!-- Real-data pages (wave 2): shared state/action strings. -->
@@ -120,7 +120,7 @@
     <value>Play all</value>
   </data>
   <data name="OpenButton.Content" xml:space="preserve">
-    <value>Open</value>
+    <value>View</value>
   </data>
   <data name="PlayMenuItem.Text" xml:space="preserve">
     <value>Play</value>
@@ -128,14 +128,19 @@
   <data name="AddToPlaylistMenuItem.Text" xml:space="preserve">
     <value>Add to playlist…</value>
   </data>
+  <data name="SearchSectionFailed.Text" xml:space="preserve">
+    <value>Couldn't load these results.</value>
+  </data>
+
+  <!-- Song-row menu additions (FX5): queue + download actions. -->
   <data name="PlayNextMenuItem.Text" xml:space="preserve">
     <value>Play next</value>
   </data>
   <data name="AddToQueueMenuItem.Text" xml:space="preserve">
     <value>Add to queue</value>
   </data>
-  <data name="SearchSectionFailed.Text" xml:space="preserve">
-    <value>Couldn't load these results.</value>
+  <data name="DownloadMenuItem.Text" xml:space="preserve">
+    <value>Download</value>
   </data>
 
   <!-- Home -->
@@ -203,8 +208,14 @@
   <data name="LibraryTabSongs.Text" xml:space="preserve">
     <value>Songs</value>
   </data>
+  <data name="FavoritesEmptyTitle.Text" xml:space="preserve">
+    <value>No favorites yet</value>
+  </data>
   <data name="FavoritesEmpty.Text" xml:space="preserve">
-    <value>No favorites yet. Tap the heart on any song to save it here.</value>
+    <value>Click the heart on any song to save it here.</value>
+  </data>
+  <data name="PlaylistsEmptyTitle.Text" xml:space="preserve">
+    <value>No playlists yet</value>
   </data>
   <data name="ArtistsEmpty.Text" xml:space="preserve">
     <value>No artists yet. Artists from songs you favorite, play or download will appear here.</value>
@@ -240,13 +251,19 @@
     <value>Download</value>
   </data>
   <data name="PlaylistsEmpty.Text" xml:space="preserve">
-    <value>No playlists yet. Create one to get started.</value>
+    <value>Create one to get started.</value>
+  </data>
+  <data name="HistoryEmptyTitle.Text" xml:space="preserve">
+    <value>Nothing here yet</value>
   </data>
   <data name="HistoryEmpty.Text" xml:space="preserve">
-    <value>Nothing here yet. Songs you play will show up.</value>
+    <value>Songs you play will show up here.</value>
+  </data>
+  <data name="DownloadsEmptyTitle.Text" xml:space="preserve">
+    <value>No downloads yet</value>
   </data>
   <data name="DownloadsEmpty.Text" xml:space="preserve">
-    <value>No downloads yet.</value>
+    <value>Downloaded songs will be saved here for offline listening.</value>
   </data>
   <data name="CreatePlaylistButton.Content" xml:space="preserve">
     <value>New playlist</value>
@@ -447,7 +464,7 @@
     <value>Library</value>
   </data>
   <data name="NavRecentlyAdded.Content" xml:space="preserve">
-    <value>Recently Added</value>
+    <value>History</value>
   </data>
   <data name="NavArtists.Content" xml:space="preserve">
     <value>Artists</value>
