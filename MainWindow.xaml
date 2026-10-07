@@ -11,12 +11,12 @@
         <MicaBackdrop Kind="Base" />
     </Window.SystemBackdrop>
 
-    <!-- One transport language (AUDIT_2 V-02/V-03): the strip's
-         transport buttons wear the same subtle discs as the Now
-         Playing page's transport row, so glyphs read at a glance and
-         hover/pressed states have a surface. On-state adds shape —
-         a filled disc + a dot under the glyph (code-behind) — never
-         colour alone (A-4). -->
+    <!-- One transport language: bare glyphs, no button backgrounds
+         (Manish, 2026-10-08 — supersedes the AUDIT_2 disc language);
+         only play/pause keeps its filled accent disc. Shuffle/repeat
+         on-state = accent glyph + a dot under the glyph (code-behind),
+         plus the state in the accessible name — never colour alone
+         (A-4). -->
 
     <!-- Shell (APPLE_LAYOUT_SPEC §1, supersedes design §9.1's
          SelectorBar strip + floating bar): a unified 64px title-bar
@@ -100,8 +100,8 @@
 
                 <!-- Transport cluster: binds PlayerViewModel (the page
                      VM), not the shell mirror. Shuffle/repeat on-state
-                     = filled disc + green glyph + dot (code-behind),
-                     plus the state in the accessible name. -->
+                     = accent glyph + dot (code-behind), plus the state
+                     in the accessible name. -->
                 <StackPanel x:Name="TransportCluster" Grid.Column="1" Orientation="Horizontal" Spacing="4"
                             Margin="8,0,0,0" VerticalAlignment="Center">
                     <ToggleButton x:Name="ShuffleButton"
@@ -111,8 +111,7 @@
                                   AutomationProperties.AutomationId="TransportShuffle"
                                   AutomationProperties.Name="Shuffle off">
                         <Grid>
-                            <Ellipse x:Name="ShuffleDisc" Width="40" Height="40" />
-                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" Width="16" Height="16"
+                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" Width="14" Height="14"
                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                             <Ellipse x:Name="ShuffleStateDot" Width="4" Height="4"
                                      HorizontalAlignment="Center" VerticalAlignment="Bottom"
@@ -125,7 +124,7 @@
                             ToolTipService.ToolTip="Previous"
                             AutomationProperties.AutomationId="TransportPrevious"
                             AutomationProperties.Name="Previous">
-                        <SymbolIcon Symbol="Previous" Width="16" Height="16"
+                        <SymbolIcon Symbol="Previous" Width="14" Height="14"
                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                     </Button>
                     <Button Style="{StaticResource StripTransportButtonStyle}"
@@ -135,7 +134,7 @@
                             ToolTipService.ToolTip="Play or pause"
                             AutomationProperties.AutomationId="NowPlayingPlayPause"
                             AutomationProperties.Name="Play or pause">
-                        <SymbolIcon Symbol="{x:Bind Player.PlayPauseSymbol, Mode=OneWay}" Width="16" Height="16"
+                        <SymbolIcon Symbol="{x:Bind Player.PlayPauseSymbol, Mode=OneWay}" Width="14" Height="14"
                                     Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
                     </Button>
                     <Button Style="{StaticResource StripTransportButtonStyle}"
@@ -143,7 +142,7 @@
                             ToolTipService.ToolTip="Next"
                             AutomationProperties.AutomationId="TransportNext"
                             AutomationProperties.Name="Next">
-                        <SymbolIcon Symbol="Next" Width="16" Height="16"
+                        <SymbolIcon Symbol="Next" Width="14" Height="14"
                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                     </Button>
                     <Button x:Name="RepeatButton"
@@ -153,8 +152,7 @@
                             AutomationProperties.AutomationId="TransportRepeat"
                             AutomationProperties.Name="Repeat off">
                         <Grid>
-                            <Ellipse x:Name="RepeatDisc" Width="40" Height="40" />
-                            <SymbolIcon x:Name="RepeatIcon" Width="16" Height="16"
+                            <SymbolIcon x:Name="RepeatIcon" Width="14" Height="14"
                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         Symbol="{x:Bind Player.RepeatSymbol, Mode=OneWay}" />
                             <Ellipse x:Name="RepeatStateDot" Width="4" Height="4"

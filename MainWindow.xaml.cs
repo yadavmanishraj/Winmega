@@ -1310,14 +1310,12 @@ public sealed partial class MainWindow : Window
     /// Shuffle/repeat on-state (spec §3 + AUDIT_2 A-4): filled disc +
     /// green glyph + a dot under the glyph, so state reads by shape
     /// as well as colour, and the state is spelled out in the
-    /// accessible name. Off-state keeps the plain disc from the
-    /// shared strip style, glyph at full primary brush — the thin
-    /// naked glyphs that vanished against the strip (V-02) are gone.
+    /// accessible name. The buttons carry no background (Manish,
+    /// 2026-10-08): state reads from the accent glyph + dot alone.
     /// </summary>
     private void UpdateTransportState()
     {
         Brush? activeBrush = GetTransportActiveBrush();
-        Brush? discBrush = GetThemeBrush("SubtleFillColorSecondaryBrush");
 
         // Off-state glyph = explicit primary brush, never null:
         // assigning null here left the shuffle/repeat glyphs
@@ -1328,14 +1326,12 @@ public sealed partial class MainWindow : Window
         Brush? primaryBrush = GetThemeBrush("TextFillColorPrimaryBrush");
 
         ShuffleIcon.Foreground = Player.IsShuffle ? activeBrush : primaryBrush;
-        ShuffleDisc.Fill = Player.IsShuffle ? discBrush : null;
         ShuffleStateDot.Visibility = Player.IsShuffle ? Visibility.Visible : Visibility.Collapsed;
         AutomationProperties.SetName(ShuffleButton,
             Player.IsShuffle ? Res.Get("ShuffleOn") : Res.Get("ShuffleOff"));
 
         bool repeatOn = Player.RepeatMode != RepeatMode.Off;
         RepeatIcon.Foreground = repeatOn ? activeBrush : primaryBrush;
-        RepeatDisc.Fill = repeatOn ? discBrush : null;
         RepeatStateDot.Visibility = repeatOn ? Visibility.Visible : Visibility.Collapsed;
         AutomationProperties.SetName(RepeatButton, Player.RepeatMode switch
         {
