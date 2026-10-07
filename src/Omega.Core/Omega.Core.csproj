@@ -22,7 +22,14 @@
     <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
   </PropertyGroup>
 
-  <!-- No package dependencies: System.Text.Json (source-generated) and
-       System.Security.Cryptography ship in the .NET 10 shared framework. -->
+  <!-- System.Text.Json (source-generated) and System.Security.Cryptography
+       ship in the .NET 10 shared framework. The one package dependency is
+       the persistence provider (design §6.1): ADO.NET over SQLitePCLRaw,
+       hand-written SQL only — chosen precisely because there is no
+       reflection-based object materializer for trimming/AOT to break.
+       The pin follows the repo's .NET 10 band (cf. app packages). -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+  </ItemGroup>
 
 </Project>
