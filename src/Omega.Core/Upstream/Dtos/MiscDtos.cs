@@ -50,5 +50,9 @@ public sealed class RawBrowseItemDto
 
     // Present on album-shaped items (their tracks). Entity "type" values
     // inside sections are unreliable (VALIDATION §4) — branch on this.
-    [JsonPropertyName("list")] public List<RawSongDto>? List { get; set; }
+    // Upstream serves "" instead of an array when no tracks are inlined
+    // (verified live), so the tolerant song-list converter is required.
+    [JsonPropertyName("list")]
+    [JsonConverter(typeof(FlexibleSongListConverter))]
+    public List<RawSongDto>? List { get; set; }
 }

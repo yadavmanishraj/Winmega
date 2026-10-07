@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Omega.Core.Upstream.Dtos;
 
 namespace Omega.Core.Upstream;
 
@@ -88,4 +89,77 @@ public sealed class FlexibleBoolConverter : JsonConverter<bool>
 
     public override void Write(Utf8JsonWriter writer, bool value, JsonSerializerOptions options) =>
         writer.WriteBooleanValue(value);
+}
+
+/// <summary>
+/// Song lists are not always arrays upstream: browse items on albums and
+/// trending entries serve <c>"list": ""</c> (an empty string) when no
+/// tracks are inlined — verified live on <c>content.getBrowseModules</c> —
+/// and empty albums/playlists can plausibly do the same. This converter
+/// maps any non-array token (string, object, number, boolean, null) to an
+/// empty list and reads only real arrays, element by element, so a
+/// hostile "list" shape can never fail deserialization of the whole
+/// payload. An empty list matches every consumer's existing semantics:
+/// the mapper coalesces null/absent track lists to empty, and album/
+/// playlist totals come from <c>list_count</c>, never the page size.
+/// Null is routed through the converter (<see cref="HandleNull"/>) so a
+/// JSON null cannot null out the album/playlist DTOs' non-null list.
+/// </summary>
+public sealed class FlexibleSongListConverter : JsonConverter<List<RawSongDto>>
+{
+    public override bool HandleNull => true;
+
+    public override List<RawSongDto> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.StartArray)
+        {
+            // "", {}, numbers, booleans, null: no inlined tracks. Skip()
+            // consumes the whole token (object included); the reader ends
+            // positioned on the value's last token, as the contract wants.
+            reader.Skip();
+            return new List<RawSongDto>();
+        }
+
+        var songs = new List<RawSongDto>();
+        while (reader.Read())
+        {
+            switch (reader.TokenType)
+            {
+                case JsonTokenType.EndArray:
+                    return songs;
+                case JsonTokenType.StartObject:
+                    RawSongDto? song = JsonSerializer.Deserialize<RawSongDto>(ref reader, options);
+                    if (song is not null)
+                    {
+                        songs.Add(song);
+                    }
+
+                    break;
+                default:
+                    // Stray scalar/null element: skip it rather than
+                    // failing the whole payload.
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        return songs;
+    }
+
+    public override void Write(Utf8JsonWriter writer, List<RawSongDto> value, JsonSerializerOptions options)
+    {
+        if (value is null)
+        {
+            writer.WriteNullValue();
+            return;
+        }
+
+        writer.WriteStartArray();
+        foreach (RawSongDto song in value)
+        {
+            JsonSerializer.Serialize(writer, song, options);
+        }
+
+        writer.WriteEndArray();
+    }
 }

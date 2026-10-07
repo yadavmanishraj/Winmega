@@ -96,4 +96,82 @@ public class JsonMappingTests
         Assert.Single(home.TopShows);       // unwrapped from shows
         Assert.Equal(7, home.Sections.Count);
     }
+
+    [Fact]
+    public void BrowseModules_EmptyStringList_LoadsItems_WithNoTracks()
+    {
+        // Regression for the live Home failure: upstream serves
+        // "list": "" on album/trending browse items, which used to throw
+        // during DTO deserialization and take the whole feed down.
+        using JsonDocument doc = JsonDocument.Parse(Fixtures.BrowseModulesEmptyStringListJson);
+        HomeModules home = UpstreamMapper.MapBrowseModules(doc.RootElement);
+
+        Assert.Single(home.NewTrending);
+        Assert.Equal("Trending Album Without Tracks", home.NewTrending[0].Title);
+        Assert.Empty(home.NewTrending[0].Tracks);
+        Assert.False(home.NewTrending[0].HasTrackList);
+
+        Assert.Single(home.NewAlbums);
+        Assert.Equal("New Album Without Tracks", home.NewAlbums[0].Title);
+        Assert.Empty(home.NewAlbums[0].Tracks);
+        Assert.False(home.NewAlbums[0].HasTrackList);
+    }
+
+    [Fact]
+    public void BrowseItem_MissingList_Loads_WithNoTracks()
+    {
+        RawBrowseItemDto dto = Deserialize<RawBrowseItemDto>(Fixtures.BrowseItemMissingListJson);
+
+        Assert.Null(dto.List);
+        HomeEntity entity = UpstreamMapper.MapBrowseItem(dto);
+        Assert.Empty(entity.Tracks);
+        Assert.False(entity.HasTrackList);
+    }
+
+    [Fact]
+    public void BrowseItem_ObjectList_Loads_WithNoTracks()
+    {
+        RawBrowseItemDto dto = Deserialize<RawBrowseItemDto>(Fixtures.BrowseItemObjectListJson);
+
+        HomeEntity entity = UpstreamMapper.MapBrowseItem(dto);
+        Assert.Empty(entity.Tracks);
+        Assert.False(entity.HasTrackList);
+    }
+
+    [Fact]
+    public void BrowseItem_RealList_StillMapsTracks()
+    {
+        RawBrowseItemDto dto = Deserialize<RawBrowseItemDto>(Fixtures.BrowseItemRealListJson);
+
+        Assert.NotNull(dto.List);
+        Assert.Single(dto.List!);
+
+        HomeEntity entity = UpstreamMapper.MapBrowseItem(dto);
+        Assert.True(entity.HasTrackList);
+        Assert.Single(entity.Tracks);
+        Assert.Equal("Apna Time Aayega", entity.Tracks[0].Name);
+        Assert.Equal(185, entity.Tracks[0].DurationSeconds);
+    }
+
+    [Fact]
+    public void Album_EmptyStringList_Tolerated()
+    {
+        RawAlbumDto dto = Deserialize<RawAlbumDto>(Fixtures.AlbumEmptyStringListJson);
+        Album album = UpstreamMapper.MapAlbum(dto);
+
+        Assert.Empty(album.Songs);
+        Assert.Equal(12, album.SongCount); // more_info.song_count — never the page
+        Assert.Equal("Empty Album", album.Name);
+    }
+
+    [Fact]
+    public void Playlist_EmptyStringList_Tolerated()
+    {
+        RawPlaylistDto dto = Deserialize<RawPlaylistDto>(Fixtures.PlaylistEmptyStringListJson);
+        Playlist playlist = UpstreamMapper.MapPlaylist(dto);
+
+        Assert.Empty(playlist.Songs);
+        Assert.Equal(7, playlist.SongCount); // list_count is the true total
+        Assert.Equal("JioSaavn", playlist.OwnerName);
+    }
 }

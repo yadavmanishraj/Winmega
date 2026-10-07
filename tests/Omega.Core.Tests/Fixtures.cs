@@ -150,6 +150,111 @@ internal static class Fixtures
         }
         """;
 
+    /// <summary>
+    /// content.getBrowseModules payload in the shape ACTUALLY served
+    /// live: album/trending items carry "list": "" (an empty string, not
+    /// an array) when no tracks are inlined. Regression fixture for the
+    /// Home load failure this produced (the JSON value at $.list could
+    /// not be converted to a song list).
+    /// </summary>
+    public const string BrowseModulesEmptyStringListJson = """
+        {
+          "new_trending": [
+            {
+              "id": "41000001",
+              "title": "Trending Album Without Tracks",
+              "type": "album",
+              "perma_url": "https://www.jiosaavn.com/album/trending/41000001",
+              "image": "https://c.saavncdn.com/010/T-150x150.jpg",
+              "language": "hindi",
+              "list": ""
+            }
+          ],
+          "new_albums": [
+            {
+              "id": "41000002",
+              "title": "New Album Without Tracks",
+              "type": "album",
+              "perma_url": "https://www.jiosaavn.com/album/new/41000002",
+              "image": "https://c.saavncdn.com/011/N-150x150.jpg",
+              "language": "hindi",
+              "list": ""
+            }
+          ],
+          "charts": [],
+          "top_playlists": [],
+          "browse_discover": [],
+          "radio": { "featured_stations": [] },
+          "top_shows": { "shows": [] }
+        }
+        """;
+
+    /// <summary>Single browse item with no "list" key at all.</summary>
+    public const string BrowseItemMissingListJson = """
+        {
+          "id": "43000001",
+          "title": "No List Key",
+          "type": "album",
+          "image": "https://c.saavncdn.com/014/M-150x150.jpg"
+        }
+        """;
+
+    /// <summary>Single browse item whose "list" is an object, not an array.</summary>
+    public const string BrowseItemObjectListJson = """
+        {
+          "id": "43000002",
+          "title": "Object List",
+          "type": "album",
+          "image": "https://c.saavncdn.com/015/O-150x150.jpg",
+          "list": {}
+        }
+        """;
+
+    /// <summary>Single album-shaped browse item with a real one-song "list" array.</summary>
+    public const string BrowseItemRealListJson = """
+        {
+          "id": "43000003",
+          "title": "Album With Tracks",
+          "type": "album",
+          "image": "https://c.saavncdn.com/016/R-150x150.jpg",
+          "list": [
+            { "id": "sng00002", "title": "Apna Time Aayega", "type": "song", "more_info": { "duration": "185" } }
+          ]
+        }
+        """;
+
+    /// <summary>
+    /// content.getAlbumDetails payload for an album whose track list is
+    /// served as "" upstream; the true total is in list_count/song_count.
+    /// </summary>
+    public const string AlbumEmptyStringListJson = """
+        {
+          "id": "42000001",
+          "title": "Empty Album",
+          "type": "album",
+          "image": "https://c.saavncdn.com/012/E-150x150.jpg",
+          "list_count": "12",
+          "list": "",
+          "more_info": { "song_count": "12" }
+        }
+        """;
+
+    /// <summary>
+    /// playlist.getDetails payload for a playlist whose song list is
+    /// served as "" upstream; the true total is in list_count.
+    /// </summary>
+    public const string PlaylistEmptyStringListJson = """
+        {
+          "id": "pl000001",
+          "title": "Empty Playlist",
+          "type": "playlist",
+          "image": "https://c.saavncdn.com/013/P-150x150.jpg",
+          "list_count": "7",
+          "list": "",
+          "more_info": { "username": "JioSaavn" }
+        }
+        """;
+
     /// <summary>lyrics.getLyrics success body (lyrics_id = the song id).</summary>
     public const string LyricsJson = """
         {
