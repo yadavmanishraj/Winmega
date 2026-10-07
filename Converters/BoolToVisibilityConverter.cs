@@ -8,7 +8,7 @@ namespace Omega.Converters;
 /// bool → Visibility for x:Bind state surfaces (loading / empty /
 /// error blocks). Registered once in App.xaml resources.
 /// </summary>
-public sealed class BoolToVisibilityConverter : IValueConverter
+public sealed partial class BoolToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, string language) =>
         value is true ? Visibility.Visible : Visibility.Collapsed;
@@ -18,7 +18,7 @@ public sealed class BoolToVisibilityConverter : IValueConverter
 }
 
 /// <summary>Inverse of <see cref="BoolToVisibilityConverter"/> (true → Collapsed).</summary>
-public sealed class InverseBoolToVisibilityConverter : IValueConverter
+public sealed partial class InverseBoolToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, string language) =>
         value is true ? Visibility.Collapsed : Visibility.Visible;

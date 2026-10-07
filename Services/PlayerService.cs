@@ -54,7 +54,7 @@ public enum RepeatMode
 /// surfaced by a 500 ms <see cref="DispatcherQueueTimer"/> (design
 /// §7.1) — batched, never per-frame.
 /// </summary>
-public sealed class PlayerService : IPlaybackGateway, IDisposable
+public sealed partial class PlayerService : IPlaybackGateway, IDisposable
 {
     private readonly JioSaavnClient _client;
     private readonly MediaPlayer _player;
