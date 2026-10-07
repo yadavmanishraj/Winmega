@@ -712,7 +712,9 @@ public partial class LibraryViewModel : ObservableObject
             s => AddToPlaylistRequested?.Invoke(s),
             removeHandler,
             favoriteChanged,
-            s => DownloadSongAsync(s));
+            playNextHandler: s => { _ = _playback.PlayNextAsync(s); },
+            addToQueueHandler: s => { _ = _playback.EnqueueAsync(s); },
+            downloadHandler: s => DownloadSongAsync(s));
 
     private async Task PlaySongAsync(Song song, IReadOnlyList<Song> queue)
     {
