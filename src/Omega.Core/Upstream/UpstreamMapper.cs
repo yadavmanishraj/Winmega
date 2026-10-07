@@ -27,6 +27,16 @@ public static class UpstreamMapper
 
     private static int ParseCount(string? value) => ParseInt(value) ?? 0;
 
+    /// <summary>Epoch-seconds string (playlist <c>last_updated</c>) → UTC instant.</summary>
+    private static DateTimeOffset? ParseEpochSeconds(string? value)
+    {
+        long? seconds = ParseLong(value);
+        // Sanity range: 1970 .. 2100 — anything else is a junk payload.
+        return seconds is > 0 and <= 4102444800
+            ? DateTimeOffset.FromUnixTimeSeconds(seconds.Value)
+            : null;
+    }
+
     // ---------- artists ----------
 
     public static ArtistRef MapArtistRef(RawArtistMapDto dto) => new(
@@ -107,19 +117,30 @@ public static class UpstreamMapper
             Explicit: dto.ExplicitContent == "1",
             SongCount: songCount,
             Artists: MapArtistGroups(dto.MoreInfo?.ArtistMap),
-            Songs: dto.List.Select(MapSong).ToList());
+            Songs: dto.List.Select(MapSong).ToList(),
+            CopyrightText: Decode(dto.MoreInfo?.CopyrightText),
+            IsDolbyContent: dto.MoreInfo?.IsDolbyContent ?? false);
     }
 
     public static Playlist MapPlaylist(RawPlaylistDto dto)
     {
         RawPlaylistMoreInfoDto? info = dto.MoreInfo;
-        string? owner = info?.Username;
-        if (string.IsNullOrEmpty(owner))
+
+        // list_count is the true total (VALIDATION §5) — never the
+        // page size. Playlist-lite items (search results, artist-page
+        // rails) may carry only more_info.song_count instead.
+        int songCount = ParseCount(dto.ListCount);
+        if (songCount == 0)
         {
-            string full = string.Join(" ", new[] { info?.Firstname, info?.Lastname }
-                .Where(s => !string.IsNullOrEmpty(s)));
-            owner = full.Length == 0 ? null : full;
+            songCount = ParseCount(info?.SongCount);
         }
+
+        // Prefer the human display name (firstname/lastname) — the
+        // username is an internal handle ("phulki_user") that editorial
+        // playlists must not surface; it is only a fallback.
+        string displayName = string.Join(" ", new[] { info?.Firstname, info?.Lastname }
+            .Where(s => !string.IsNullOrEmpty(s)));
+        string? owner = displayName.Length > 0 ? displayName : info?.Username;
 
         return new Playlist(
             Id: dto.Id ?? string.Empty,
@@ -130,11 +151,15 @@ public static class UpstreamMapper
             Language: dto.Language ?? info?.Language,
             Year: ParseInt(dto.Year),
             PlayCount: ParseLong(dto.PlayCount),
-            // list_count is the true total (VALIDATION §5) — never the page size.
-            SongCount: ParseCount(dto.ListCount),
+            SongCount: songCount,
             OwnerName: Decode(owner),
             Artists: (info?.Artists ?? new List<RawArtistMapDto>()).Select(MapArtistRef).ToList(),
-            Songs: dto.List.Select(MapSong).ToList());
+            Songs: dto.List.Select(MapSong).ToList(),
+            // follower_count is plain digits; fan_count is pre-formatted
+            // ("366,839") and slightly divergent — never parse it.
+            FollowerCount: ParseLong(info?.FollowerCount),
+            LastUpdatedUtc: ParseEpochSeconds(info?.LastUpdated),
+            IsDolbyContent: info?.IsDolbyContent ?? false);
     }
 
     // ---------- artist page ----------
@@ -153,13 +178,27 @@ public static class UpstreamMapper
         DateOfBirth: dto.Dob,
         TopSongs: dto.TopSongs.Select(MapSong).ToList(),
         TopAlbums: dto.TopAlbums.Select(MapAlbum).ToList(),
-        Singles: dto.Singles.Select(MapSong).ToList(),
+        // Singles are album-lite releases upstream (type:"album", no
+        // streams/duration) — mapping them as songs produced unplayable
+        // shells. They are albums; detail loads via GetAlbumAsync.
+        Singles: dto.Singles.Select(MapAlbum).ToList(),
         SimilarArtists: dto.SimilarArtists.Select(s => new ArtistRef(
             Id: s.Id ?? string.Empty,
             Name: Decode(s.Name) ?? string.Empty,
             Role: null,
             Image: MediaDecryptor.BuildImageSet(s.ImageUrl),
-            Url: s.PermaUrl)).ToList());
+            Url: s.PermaUrl)).ToList(),
+        Subtitle: Decode(dto.Subtitle),
+        // latest_release arrives as a list of album-lite items; the
+        // design renders at most one (the newest).
+        LatestRelease: dto.LatestRelease.Count > 0 ? MapAlbum(dto.LatestRelease[0]) : null,
+        DedicatedPlaylists: dto.DedicatedPlaylists.Select(MapPlaylist).ToList(),
+        FeaturedPlaylists: dto.FeaturedPlaylists.Select(MapPlaylist).ToList(),
+        AvailableLanguages: dto.AvailableLanguages
+            .Where(l => !string.IsNullOrWhiteSpace(l) &&
+                        !string.Equals(l, "unknown", StringComparison.OrdinalIgnoreCase))
+            .ToList(),
+        Wiki: dto.Wiki);
 
     /// <summary>
     /// The upstream bio is a JSON-encoded string of {text, title, sequence}.

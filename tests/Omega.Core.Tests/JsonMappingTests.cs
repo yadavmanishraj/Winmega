@@ -174,4 +174,94 @@ public class JsonMappingTests
         Assert.Equal(7, playlist.SongCount); // list_count is the true total
         Assert.Equal("JioSaavn", playlist.OwnerName);
     }
+
+    [Fact]
+    public void Album_CopyrightText_AndDolby_AreExposed()
+    {
+        RawAlbumDto dto = Deserialize<RawAlbumDto>(Fixtures.AlbumDetailsJson);
+        Album album = UpstreamMapper.MapAlbum(dto);
+
+        Assert.Equal("Bhediya", album.Name);
+        Assert.Equal("℗ 2023 Zee Music Company", album.CopyrightText);
+        Assert.True(album.IsDolbyContent);
+        Assert.Equal(6, album.SongCount);
+        Assert.Single(album.Songs);
+        Assert.Equal("Sachin-Jigar", album.Artists.Primary.Single().Name);
+    }
+
+    [Fact]
+    public void Playlist_OwnerDisplayName_Followers_LastUpdated_Dolby_AreExposed()
+    {
+        RawPlaylistDto dto = Deserialize<RawPlaylistDto>(Fixtures.PlaylistDetailsJson);
+        Playlist playlist = UpstreamMapper.MapPlaylist(dto);
+
+        // Display name wins over the internal "phulki_user" handle.
+        Assert.Equal("JioSaavn", playlist.OwnerName);
+        // Numeric follower_count wins; fan_count ("366,839") is ignored.
+        Assert.Equal(366849L, playlist.FollowerCount);
+        // Epoch-seconds string -> UTC instant (2026-10-06 per the probe).
+        Assert.Equal(
+            DateTimeOffset.FromUnixTimeSeconds(1791281247),
+            playlist.LastUpdatedUtc);
+        Assert.True(playlist.IsDolbyContent);
+        Assert.Equal(25, playlist.SongCount);
+        Assert.Equal("Hindi sad songs of Arijit Singh", playlist.Description);
+    }
+
+    [Fact]
+    public void ArtistPage_NewSections_AreExposed()
+    {
+        RawArtistPageDto dto = Deserialize<RawArtistPageDto>(Fixtures.ArtistPageJson);
+        Artist artist = UpstreamMapper.MapArtist(dto);
+
+        Assert.Equal("459320", artist.Id);
+        Assert.Equal("Artist • 9503254 Listeners", artist.Subtitle);
+        Assert.Equal(9503254L, artist.FanCount);
+        Assert.Equal(107974103L, artist.FollowerCount);
+        Assert.True(artist.IsVerified);
+        Assert.Equal("25-04-1987", artist.DateOfBirth);
+        Assert.Equal("http://en.wikipedia.org/wiki/Arijit_Singh", artist.Wiki);
+
+        // "unknown" is filtered; real languages survive in order.
+        Assert.Equal(new[] { "hindi", "bengali" }, artist.AvailableLanguages);
+
+        // Bio JSON string still decodes into titled entries.
+        BioEntry bio = Assert.Single(artist.Bio);
+        Assert.Equal("Introduction", bio.Title);
+
+        Album latest = Assert.IsType<Album>(artist.LatestRelease);
+        Assert.Equal("Newest Single Album", latest.Name);
+        Assert.Equal(2026, latest.Year);
+        Assert.Equal(1, latest.SongCount);
+        Assert.Empty(latest.Songs); // album-lite: tracks load on demand
+
+        Playlist dedicated = Assert.Single(artist.DedicatedPlaylists);
+        Assert.Equal("Just Arijit Singh", dedicated.Name);
+        Assert.Equal(25, dedicated.SongCount); // lite items: more_info.song_count
+
+        Playlist featured = Assert.Single(artist.FeaturedPlaylists);
+        Assert.Equal("Featured In: Bollywood Romance", featured.Name);
+        Assert.Equal(30, featured.SongCount);
+
+        Assert.Single(artist.TopSongs);
+        Album topAlbum = Assert.Single(artist.TopAlbums);
+        Assert.Equal(11, topAlbum.SongCount);
+        Assert.Single(artist.SimilarArtists);
+    }
+
+    [Fact]
+    public void ArtistPage_Singles_MapToAlbums_NotSongs()
+    {
+        RawArtistPageDto dto = Deserialize<RawArtistPageDto>(Fixtures.ArtistPageJson);
+        Artist artist = UpstreamMapper.MapArtist(dto);
+
+        // singles[] are album-lite releases upstream (type "album", no
+        // streams/duration); as Songs they were unplayable shells.
+        Album single = Assert.Single(artist.Singles);
+        Assert.Equal("51000001", single.Id);
+        Assert.Equal("Kesariya (Single)", single.Name);
+        Assert.Equal(2022, single.Year);
+        Assert.Equal(1, single.SongCount);
+        Assert.Empty(single.Songs);
+    }
 }

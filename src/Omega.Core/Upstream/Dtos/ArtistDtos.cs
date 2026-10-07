@@ -47,10 +47,28 @@ public sealed class RawArtistPageDto
     // defensively in the mapper; a malformed bio must not kill the page.
     [JsonPropertyName("bio")] public string? Bio { get; set; }
     [JsonPropertyName("dob")] public string? Dob { get; set; }
+    [JsonPropertyName("wiki")] public string? Wiki { get; set; }
+
+    // Language codes the artist sings in; includes an "unknown" entry
+    // the mapper filters out.
+    [JsonPropertyName("availableLanguages")] public List<string> AvailableLanguages { get; set; } = new();
     [JsonPropertyName("urls")] public RawArtistUrlsDto? Urls { get; set; }
     [JsonPropertyName("topSongs")] public List<RawSongDto> TopSongs { get; set; } = new();
     [JsonPropertyName("topAlbums")] public List<RawAlbumDto> TopAlbums { get; set; } = new();
-    [JsonPropertyName("singles")] public List<RawSongDto> Singles { get; set; } = new();
+
+    // Album-lite items (type:"album", no tracks inlined) — same shape
+    // as topAlbums.
+    [JsonPropertyName("latest_release")] public List<RawAlbumDto> LatestRelease { get; set; } = new();
+
+    // NOT songs: singles are album-lite releases (type:"album", no
+    // encrypted media URL, no duration) — probe-verified. They map to
+    // Albums, exactly like topAlbums.
+    [JsonPropertyName("singles")] public List<RawAlbumDto> Singles { get; set; } = new();
+
+    // Playlist-lite rails ("Just <Artist>" / "Featured In"); same
+    // shape as playlist search results.
+    [JsonPropertyName("dedicated_artist_playlist")] public List<RawPlaylistDto> DedicatedPlaylists { get; set; } = new();
+    [JsonPropertyName("featured_artist_playlist")] public List<RawPlaylistDto> FeaturedPlaylists { get; set; } = new();
     [JsonPropertyName("similarArtists")] public List<RawSimilarArtistDto> SimilarArtists { get; set; } = new();
 }
 
