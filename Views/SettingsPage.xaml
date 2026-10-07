@@ -8,7 +8,7 @@
          and the standard 8px card radius; theme switch applies to
          the root element via App.ApplyThemeMode. -->
     <ScrollViewer>
-        <StackPanel Padding="24,24,24,96" Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
+        <StackPanel Padding="24,24,24,24" Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
             <TextBlock x:Uid="SettingsTitle" Style="{ThemeResource TitleTextBlockStyle}" />
             <TextBlock x:Uid="SettingsSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
 
