@@ -457,6 +457,9 @@
   <data name="NavHome.Content" xml:space="preserve">
     <value>Home</value>
   </data>
+  <data name="NavNowPlaying.Content" xml:space="preserve">
+    <value>Now Playing</value>
+  </data>
   <data name="SidebarLibraryHeader.Content" xml:space="preserve">
     <value>Library</value>
   </data>
@@ -503,6 +506,9 @@
   </data>
   <data name="NowPlayingFormat" xml:space="preserve">
     <value>Now playing: {0} by {1}</value>
+  </data>
+  <data name="NowPlayingTitle" xml:space="preserve">
+    <value>Now Playing</value>
   </data>
   <data name="ShuffleOn" xml:space="preserve">
     <value>Shuffle on</value>

@@ -14,7 +14,7 @@ using Windows.Media.Playback;
 namespace Omega.ViewModels;
 
 /// <summary>
-/// Presentation state for the full Now Playing page (design §9.5).
+/// Presentation state for the Now Playing panel (design §9.5).
 /// A thin mirror over the singleton <see cref="PlayerService"/>: the
 /// service raises <c>StateChanged</c> on the UI thread (500 ms ticker
 /// + every transport/track change), and this model re-reads and
@@ -45,7 +45,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     /// <summary>The live queue (the service's own collection — ListView reorder writes through).</summary>
     public ObservableCollection<Song> Queue => _player.Queue;
 
-    /// <summary>The engine, for the page's MediaPlayerElement.SetMediaPlayer (design §7.1).</summary>
+    /// <summary>
+    /// The engine itself. The retired page bound it into a
+    /// MediaPlayerElement poster surface; the panel renders the
+    /// artwork from <see cref="CurrentArtworkSource"/> instead, so
+    /// this stays as the service's public engine accessor.
+    /// </summary>
     public MediaPlayer MediaPlayer => _player.Player;
 
     [ObservableProperty]

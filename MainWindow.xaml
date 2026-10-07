@@ -32,7 +32,7 @@
          reinterpreted as window drags (POINTER QA F3). Green is
          spent the way Apple spends red: selection pill, play fill,
          on-states — never text or backgrounds (§0). -->
-    <Grid x:Name="RootGrid" SizeChanged="RootGrid_SizeChanged">
+    <Grid x:Name="RootGrid" SizeChanged="RootGrid_SizeChanged" KeyDown="RootGrid_KeyDown">
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Modifiers="Control" Key="F"
                                  Invoked="SearchAccelerator_Invoked" />
@@ -293,9 +293,9 @@
                             AutomationProperties.Name="Volume" />
                     <!-- Lyrics + Queue are quick-view flyouts now
                          (approved sample, 2026-10-07): the strip click
-                         opens the panel instead of navigating away;
-                         each panel's footer still lands on the Now
-                         Playing page at the named section. Flyout
+                         opens the flyout instead of navigating away;
+                         each flyout's footer opens the docked Now
+                         Playing panel at the named segment. Flyout
                          content is declared inline in this window (no
                          dictionary-hosted templates) and binds the
                          same Player VM as the rest of the strip. -->
@@ -508,8 +508,8 @@
                                          current track (rebuilt in
                                          code-behind). No drag-reorder:
                                          the service exposes no move op,
-                                         and the Now Playing page's list
-                                         remains the reorder surface. -->
+                                         and the Now Playing panel's queue
+                                         list remains the reorder surface. -->
                                     <ListView x:Name="QueueFlyoutList" Grid.Row="3"
                                               Margin="8,0,8,8"
                                               ItemsSource="{x:Bind UpNextItems}"
@@ -622,9 +622,9 @@
 
         <!-- ============ Row 1: shell failure bar (AUDIT_3 M2) ============
              Playback/navigation failures used to render only inside
-             the Now Playing page; everywhere else a failed track was
-             a silent stop. This slim bar surfaces the same state at
-             shell level, on every page, until dismissed. -->
+             the Now Playing surface; everywhere else a failed track
+             was a silent stop. This slim bar surfaces the same state
+             at shell level, on every page, until dismissed. -->
         <Border x:Name="FailureBar" Grid.Row="1"
                 Visibility="Collapsed"
                 Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}"
@@ -652,15 +652,27 @@
             </Grid>
         </Border>
 
-        <!-- ============ Row 2: NavigationView + content ============ -->
+        <!-- ============ Row 2: NavigationView + content, with the
+             Now Playing panel docked in a real layout column beside
+             it (approved panel design: NOT an overlay — the
+             NavigationView narrows and the page reflows). The host
+             grid stays empty (width 0) while the panel is closed;
+             the panel control itself is created on open and removed
+             on close by code-behind. ============ -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
         <NavigationView x:Name="ShellNav"
-                        Grid.Row="2"
+                        Grid.Column="0"
                         PaneDisplayMode="Auto"
                         OpenPaneLength="260"
                         IsPaneToggleButtonVisible="False"
                         IsSettingsVisible="False"
                         IsBackButtonVisible="Collapsed"
-                        ItemInvoked="ShellNav_ItemInvoked">
+                        ItemInvoked="ShellNav_ItemInvoked"
+                        SelectionChanged="ShellNav_SelectionChanged">
             <NavigationView.PaneCustomContent>
                 <!-- THE search box of the app (spec §1/§5): SearchPage's
                      own box is removed by WS2, so the SearchBox id lives
@@ -678,6 +690,16 @@
                                     AutomationProperties.AutomationId="NavHome">
                     <NavigationViewItem.Icon>
                         <SymbolIcon Symbol="Home" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <!-- Now Playing opens the docked panel (it is not a
+                     page any more): the invoke is intercepted in
+                     code-behind and the row's selection is restored
+                     to the current section afterwards. -->
+                <NavigationViewItem x:Name="NavNowPlayingItem" x:Uid="NavNowPlaying" Tag="nowplaying"
+                                    AutomationProperties.AutomationId="NavNowPlaying">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Play" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItemHeader x:Uid="SidebarLibraryHeader" />
@@ -744,5 +766,11 @@
             </NavigationView.PaneFooter>
             <Frame x:Name="ContentFrame" Navigated="ContentFrame_Navigated" />
         </NavigationView>
+        <!-- Now Playing panel host: empty while the panel is
+             closed. Code-behind adds the fresh panel control here
+             on open and removes (disposes) it after the close
+             slide. -->
+        <Grid x:Name="NowPlayingPanelHost" Grid.Column="1" />
+        </Grid>
     </Grid>
 </Window>
