@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
@@ -15,7 +16,8 @@ namespace Omega.Views;
 /// Library page (design §9.4). Code-behind: tab panel switching and
 /// the playlist/history dialogs — create/rename validate a non-empty
 /// name inline (error text under the field, dialog stays open);
-/// delete/clear are verb-labelled confirmations.
+/// delete/clear are verb-labelled confirmations. Shell navigation can
+/// preselect a tab (and a playlist) via <see cref="LibraryNavigationArgs"/>.
 /// </summary>
 public sealed partial class LibraryPage : Page
 {
@@ -36,6 +38,50 @@ public sealed partial class LibraryPage : Page
     {
         base.OnNavigatedTo(e);
         await ViewModel.LoadAllAsync();
+        if (e.Parameter is LibraryNavigationArgs args)
+        {
+            ApplyNavigationArgs(args);
+        }
+    }
+
+    /// <summary>
+    /// One-shot application of shell navigation arguments: select the
+    /// requested tab (SelectorBar visual state + panel via the same
+    /// <see cref="SetTab"/> path the SelectionChanged handler uses) and,
+    /// for the Playlists tab, preselect the requested playlist — setting
+    /// <see cref="LibraryViewModel.SelectedPlaylist"/> loads its songs
+    /// through the VM's selection handler. Runs only on navigation, so
+    /// later user tab clicks are never overridden.
+    /// </summary>
+    private void ApplyNavigationArgs(LibraryNavigationArgs args)
+    {
+        int index = args.Tab switch
+        {
+            "playlists" => 1,
+            "history" => 2,
+            "downloads" => 3,
+            _ => 0,
+        };
+
+        SelectorBarItem item = index switch
+        {
+            1 => TabPlaylists,
+            2 => TabHistory,
+            3 => TabDownloads,
+            _ => TabFavorites,
+        };
+        item.IsSelected = true;
+        SetTab(index);
+
+        if (args.Tab == "playlists" && args.PlaylistId is { } playlistId)
+        {
+            PlaylistItemViewModel? playlist =
+                ViewModel.Playlists.FirstOrDefault(p => p.Id == playlistId);
+            if (playlist is not null)
+            {
+                ViewModel.SelectedPlaylist = playlist;
+            }
+        }
     }
 
     private async void OnAddToPlaylistRequested(Song song) =>

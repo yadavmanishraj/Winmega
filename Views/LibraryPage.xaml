@@ -109,7 +109,7 @@
     </Page.Resources>
 
     <ScrollViewer>
-        <StackPanel Padding="24,24,24,96" Spacing="16">
+        <StackPanel Padding="24,24,24,24" Spacing="16">
             <TextBlock x:Uid="LibraryTitle" Style="{ThemeResource TitleTextBlockStyle}" />
             <TextBlock x:Uid="LibrarySubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
 

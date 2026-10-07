@@ -1,6 +1,4 @@
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -12,13 +10,14 @@ using Omega.ViewModels;
 namespace Omega.Views;
 
 /// <summary>
-/// Search page (design §9.3). Code-behind: suggestion debounce
-/// (~300ms per design §5.1), tab panel switching, navigation.
+/// Search page (design §9.3). The only search field in the app is the
+/// shell's sidebar box (Apple layout); it navigates here with the query
+/// as a string parameter. Code-behind: query intake on navigation, tab
+/// panel switching, result navigation.
 /// </summary>
 public sealed partial class SearchPage : Page
 {
     private readonly ILibraryStore _store;
-    private CancellationTokenSource? _debounceCts;
 
     public SearchPage()
     {
@@ -31,48 +30,32 @@ public sealed partial class SearchPage : Page
 
     public SearchViewModel ViewModel { get; }
 
+    /// <summary>
+    /// Sidebar-search handoff: a non-empty string parameter runs the
+    /// search on the Top tab (the exact path the page's own submit
+    /// handler used before the box moved to the shell). A null/other
+    /// parameter leaves the page in its current (idle or previous
+    /// results) state.
+    /// </summary>
+    protected override async void OnNavigatedTo(NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        if (e.Parameter is string query && !string.IsNullOrWhiteSpace(query))
+        {
+            TabTop.IsSelected = true;
+            SetTab(0);
+            await ViewModel.SearchAsync(query);
+        }
+    }
+
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         ViewModel.CancelLoads();
-        _debounceCts?.Cancel();
         base.OnNavigatedFrom(e);
     }
 
     private async void OnAddToPlaylistRequested(Song song) =>
         await PlaylistPicker.ShowAsync(XamlRoot, _store, song);
-
-    private async void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
-    {
-        if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput)
-        {
-            return;
-        }
-
-        _debounceCts?.Cancel();
-        _debounceCts = new CancellationTokenSource();
-        try
-        {
-            await Task.Delay(300, _debounceCts.Token);
-            await ViewModel.LoadSuggestionsAsync(sender.Text);
-        }
-        catch (TaskCanceledException)
-        {
-            // Superseded by a newer keystroke.
-        }
-    }
-
-    private async void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
-    {
-        string query = args.ChosenSuggestion as string ?? args.QueryText;
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            return;
-        }
-
-        TabTop.IsSelected = true;
-        SetTab(0);
-        await ViewModel.SearchAsync(query);
-    }
 
     private void SearchTabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {

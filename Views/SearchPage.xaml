@@ -4,10 +4,12 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:Omega.ViewModels">
 
-    <!-- Search (design §9.3): AutoSuggestBox + SelectorBar tabs
-         (Top results / Songs / Albums / Artists / Playlists). Each
-         tab keeps its own collection in the ViewModel; the page only
-         switches panel visibility. -->
+    <!-- Search (design §9.3): the query arrives as a navigation
+         parameter from the shell's sidebar search box (the page has
+         no box of its own). SelectorBar tabs (Top results / Songs /
+         Albums / Artists / Playlists). Each tab keeps its own
+         collection in the ViewModel; the page only switches panel
+         visibility. -->
     <Page.Resources>
         <DataTemplate x:Key="SongRowTemplate" x:DataType="vm:SongItemViewModel">
             <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
@@ -112,19 +114,9 @@
     </Page.Resources>
 
     <ScrollViewer>
-        <StackPanel Padding="24,24,24,96" Spacing="16">
+        <StackPanel Padding="24,24,24,24" Spacing="16">
             <TextBlock x:Uid="SearchTitle" Style="{ThemeResource TitleTextBlockStyle}" />
             <TextBlock x:Uid="SearchSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
-
-            <AutoSuggestBox x:Uid="SearchBox"
-                            x:Name="SearchBox"
-                            MaxWidth="640"
-                            HorizontalAlignment="Left"
-                            QueryIcon="Find"
-                            ItemsSource="{x:Bind ViewModel.Suggestions, Mode=OneWay}"
-                            TextChanged="SearchBox_TextChanged"
-                            QuerySubmitted="SearchBox_QuerySubmitted"
-                            AutomationProperties.AutomationId="SearchBox" />
 
             <SelectorBar x:Name="SearchTabs"
                          AutomationProperties.AutomationId="SearchTabs"

@@ -13,7 +13,7 @@
          4px-grid spacing, theme resources for every colour, standard
          radii, no acrylic (transient surfaces only — the bar). -->
     <ScrollViewer>
-        <StackPanel Padding="24,24,24,96" Spacing="24"
+        <StackPanel Padding="24,24,24,24" Spacing="24"
                     MaxWidth="768" HorizontalAlignment="Center">
 
             <!-- Header + sleep-timer chip -->
@@ -127,7 +127,7 @@
                         Background="{ThemeResource AccentFillColorDefaultBrush}"
                         Command="{x:Bind ViewModel.TogglePlayPauseCommand}"
                         ToolTipService.ToolTip="Play or pause"
-                        AutomationProperties.AutomationId="NowPlayingPlayPause"
+                        AutomationProperties.AutomationId="NowPlayingPagePlayPause"
                         AutomationProperties.Name="Play or pause">
                     <SymbolIcon Symbol="{x:Bind ViewModel.PlayPauseSymbol, Mode=OneWay}" Width="24" Height="24" />
                 </Button>
