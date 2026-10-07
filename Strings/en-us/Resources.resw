@@ -114,4 +114,285 @@
   <data name="SettingsEndpointNote.Text" xml:space="preserve">
     <value>API endpoint: https://www.jiosaavn.com/api.php — direct upstream. The advanced override field lands with the full Settings implementation.</value>
   </data>
+
+  <!-- Real-data pages (wave 2): shared state/action strings. -->
+  <data name="LoadingText.Text" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+  <data name="ErrorInfoBar.Title" xml:space="preserve">
+    <value>Something went wrong</value>
+  </data>
+  <data name="RetryButton.Content" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="LoadMoreButton.Content" xml:space="preserve">
+    <value>Load more</value>
+  </data>
+  <data name="PlayAllButton.Content" xml:space="preserve">
+    <value>Play all</value>
+  </data>
+  <data name="OpenButton.Content" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="PlayMenuItem.Text" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="AddToPlaylistMenuItem.Text" xml:space="preserve">
+    <value>Add to playlist…</value>
+  </data>
+
+  <!-- Home -->
+  <data name="HomeHeroPlayButton.Content" xml:space="preserve">
+    <value>Play trending</value>
+  </data>
+  <data name="SectionJumpBackIn.Text" xml:space="preserve">
+    <value>Jump back in</value>
+  </data>
+  <data name="SectionTrending.Text" xml:space="preserve">
+    <value>Trending songs</value>
+  </data>
+  <data name="SectionNewAlbums.Text" xml:space="preserve">
+    <value>New albums</value>
+  </data>
+  <data name="SectionCharts.Text" xml:space="preserve">
+    <value>Charts</value>
+  </data>
+  <data name="SectionTopPlaylists.Text" xml:space="preserve">
+    <value>Top playlists</value>
+  </data>
+  <data name="SectionDiscover.Text" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+
+  <!-- Search -->
+  <data name="SearchTabTop.Text" xml:space="preserve">
+    <value>Top results</value>
+  </data>
+  <data name="SearchTabSongs.Text" xml:space="preserve">
+    <value>Songs</value>
+  </data>
+  <data name="SearchTabAlbums.Text" xml:space="preserve">
+    <value>Albums</value>
+  </data>
+  <data name="SearchTabArtists.Text" xml:space="preserve">
+    <value>Artists</value>
+  </data>
+  <data name="SearchTabPlaylists.Text" xml:space="preserve">
+    <value>Playlists</value>
+  </data>
+  <data name="SearchStartHint.Text" xml:space="preserve">
+    <value>Search for songs, albums, artists and playlists.</value>
+  </data>
+
+  <!-- Library -->
+  <data name="LibraryTabFavorites.Text" xml:space="preserve">
+    <value>Favorites</value>
+  </data>
+  <data name="LibraryTabPlaylists.Text" xml:space="preserve">
+    <value>Playlists</value>
+  </data>
+  <data name="LibraryTabHistory.Text" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="LibraryTabDownloads.Text" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
+  <data name="FavoritesEmpty.Text" xml:space="preserve">
+    <value>No favorites yet. Tap the heart on any song to save it here.</value>
+  </data>
+  <data name="PlaylistsEmpty.Text" xml:space="preserve">
+    <value>No playlists yet. Create one to get started.</value>
+  </data>
+  <data name="HistoryEmpty.Text" xml:space="preserve">
+    <value>Nothing here yet. Songs you play will show up.</value>
+  </data>
+  <data name="DownloadsEmpty.Text" xml:space="preserve">
+    <value>No downloads yet.</value>
+  </data>
+  <data name="CreatePlaylistButton.Content" xml:space="preserve">
+    <value>New playlist</value>
+  </data>
+  <data name="RenamePlaylistButton.Content" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="DeletePlaylistButton.Content" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ClearHistoryButton.Content" xml:space="preserve">
+    <value>Clear history</value>
+  </data>
+
+  <!-- Settings -->
+  <data name="AppearanceHeader.Text" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="ThemeLabel.Text" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="PlaybackHeader.Text" xml:space="preserve">
+    <value>Playback</value>
+  </data>
+  <data name="QualityLabel.Text" xml:space="preserve">
+    <value>Streaming quality</value>
+  </data>
+  <data name="QualityNote.Text" xml:space="preserve">
+    <value>Applies to songs you play from now on. Auto uses the highest quality each song offers, with fallback to lower qualities.</value>
+  </data>
+  <data name="AboutHeader.Text" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="VersionLabel.Text" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="AboutBody.Text" xml:space="preserve">
+    <value>No login, no account, no tracking. Favorites, downloads, history and playlists live only on this PC.</value>
+  </data>
+
+  <!-- Detail -->
+  <data name="BackLabel.Text" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="BioHeader.Text" xml:space="preserve">
+    <value>About the artist</value>
+  </data>
+  <data name="SinglesHeader.Text" xml:space="preserve">
+    <value>Singles</value>
+  </data>
+  <data name="TopAlbumsHeader.Text" xml:space="preserve">
+    <value>Albums</value>
+  </data>
+  <data name="SimilarArtistsHeader.Text" xml:space="preserve">
+    <value>Similar artists</value>
+  </data>
+
+  <!-- Plain keys consumed from code via Res (no property suffix). -->
+  <data name="AppName" xml:space="preserve">
+    <value>Omega</value>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>More actions</value>
+  </data>
+  <data name="AddToFavorites" xml:space="preserve">
+    <value>Add to favorites</value>
+  </data>
+  <data name="RemoveFromFavorites" xml:space="preserve">
+    <value>Remove from favorites</value>
+  </data>
+  <data name="RemoveFromPlaylist" xml:space="preserve">
+    <value>Remove from playlist</value>
+  </data>
+  <data name="GoodMorning" xml:space="preserve">
+    <value>Good morning</value>
+  </data>
+  <data name="GoodAfternoon" xml:space="preserve">
+    <value>Good afternoon</value>
+  </data>
+  <data name="GoodEvening" xml:space="preserve">
+    <value>Good evening</value>
+  </data>
+  <data name="PlaylistSongCountFormat" xml:space="preserve">
+    <value>{0} songs</value>
+  </data>
+  <data name="SearchNoResultsFormat" xml:space="preserve">
+    <value>No results for “{0}”.</value>
+  </data>
+  <data name="TopSongsHeader" xml:space="preserve">
+    <value>Top songs</value>
+  </data>
+  <data name="SongsHeader" xml:space="preserve">
+    <value>Songs</value>
+  </data>
+  <data name="ArtistFollowersFormat" xml:space="preserve">
+    <value>{0} followers</value>
+  </data>
+  <data name="DetailUnknownKind" xml:space="preserve">
+    <value>Unknown content type.</value>
+  </data>
+  <data name="FavoritesCountFormat" xml:space="preserve">
+    <value>{0} favorites</value>
+  </data>
+  <data name="PlaylistsCountFormat" xml:space="preserve">
+    <value>{0} playlists</value>
+  </data>
+  <data name="HistoryCountFormat" xml:space="preserve">
+    <value>{0} songs played</value>
+  </data>
+  <data name="DownloadsCountFormat" xml:space="preserve">
+    <value>{0} downloads</value>
+  </data>
+  <data name="DownloadStatusDownloading" xml:space="preserve">
+    <value>Downloading</value>
+  </data>
+  <data name="DownloadStatusCompleted" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="DownloadStatusFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="AddToPlaylistTitle" xml:space="preserve">
+    <value>Add to playlist</value>
+  </data>
+  <data name="PlaylistPickerEmpty" xml:space="preserve">
+    <value>No playlists yet — create one below and the song is added to it.</value>
+  </data>
+  <data name="NewPlaylistPlaceholder" xml:space="preserve">
+    <value>New playlist name</value>
+  </data>
+  <data name="NewPlaylistTitle" xml:space="preserve">
+    <value>New playlist</value>
+  </data>
+  <data name="RenamePlaylistTitle" xml:space="preserve">
+    <value>Rename playlist</value>
+  </data>
+  <data name="PlaylistNameLabel" xml:space="preserve">
+    <value>Playlist name</value>
+  </data>
+  <data name="PlaylistNameRequired" xml:space="preserve">
+    <value>Enter a name for the playlist.</value>
+  </data>
+  <data name="CreatePlaylist" xml:space="preserve">
+    <value>Create and add</value>
+  </data>
+  <data name="DeletePlaylistTitle" xml:space="preserve">
+    <value>Delete playlist?</value>
+  </data>
+  <data name="DeletePlaylistFormat" xml:space="preserve">
+    <value>“{0}” will be removed from this PC. The songs themselves are not deleted.</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ClearHistoryTitle" xml:space="preserve">
+    <value>Clear history?</value>
+  </data>
+  <data name="ClearHistoryMessage" xml:space="preserve">
+    <value>Your listening history on this PC will be cleared.</value>
+  </data>
+  <data name="Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="QualityAuto" xml:space="preserve">
+    <value>Auto (highest available)</value>
+  </data>
+  <data name="QualityKbpsFormat" xml:space="preserve">
+    <value>{0} kbps</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
 </root>
