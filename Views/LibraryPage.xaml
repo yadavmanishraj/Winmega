@@ -2,15 +2,16 @@
     x:Class="Omega.Views.LibraryPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:vm="using:Omega.ViewModels">
+    xmlns:vm="using:Omega.ViewModels"
+    xmlns:controls="using:Omega.Controls">
 
     <!-- Library (design §9.4): all-local. SelectorBar sections
          Favorites / Playlists / Artists / Albums / Songs / History /
          Downloads, each with a count line and its own empty state.
          Artists/Albums/Songs aggregate the local library union
          (FX3); group tiles open Detail when they carry an upstream
-         id, otherwise they filter the Songs tab. The song-row
-         template is the shared one in App.xaml; empty states use
+         id, otherwise they filter the Songs tab. Song rows are
+         the shared SongRow control (Controls/SongRow.xaml); empty states use
          the shared EmptyState composition (AUDIT_2 V-12). -->
     <Page.Resources>
         <DataTemplate x:Key="PlaylistRowTemplate" x:DataType="vm:PlaylistItemViewModel">
@@ -66,6 +67,13 @@
                     <FontIcon Glyph="&#xE74D;" FontSize="18" />
                 </Button>
             </Grid>
+        </DataTemplate>
+        <!-- Song rows: the shared SongRow control, fed the item by a
+             page-local template (page-local DataTemplates with x:Bind
+             are codegen-proven here; the merged-dictionary template
+             this replaces never evaluated its bindings — D1). -->
+        <DataTemplate x:Key="SongRowItemTemplate" x:DataType="vm:SongItemViewModel">
+            <controls:SongRow ViewModel="{x:Bind}" />
         </DataTemplate>
     </Page.Resources>
 
@@ -132,7 +140,7 @@
                     <TextBlock x:Uid="FavoritesEmpty" Style="{StaticResource EmptyStateGuidanceStyle}" />
                 </StackPanel>
                 <ListView ItemsSource="{x:Bind ViewModel.Favorites, Mode=OneWay}"
-                          ItemTemplate="{StaticResource SongRowTemplate}"
+                          ItemTemplate="{StaticResource SongRowItemTemplate}"
                           ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                           SelectionMode="None" IsItemClickEnabled="True" ItemClick="SongRow_ItemClick"
                           AutomationProperties.AutomationId="LibraryFavoritesList" />
@@ -187,7 +195,7 @@
                                     AutomationProperties.AutomationId="LibraryPlaylistDelete" />
                         </StackPanel>
                         <ListView ItemsSource="{x:Bind ViewModel.PlaylistSongs, Mode=OneWay}"
-                                  ItemTemplate="{StaticResource SongRowTemplate}"
+                                  ItemTemplate="{StaticResource SongRowItemTemplate}"
                                   ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                                   SelectionMode="None" IsItemClickEnabled="True" ItemClick="SongRow_ItemClick"
                                   AutomationProperties.AutomationId="LibraryPlaylistSongsList" />
@@ -238,7 +246,7 @@
                 <TextBlock x:Uid="SongsEmpty" Style="{StaticResource EmptyStateGuidanceStyle}"
                            Visibility="{x:Bind ViewModel.HasSongs, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
                 <ListView ItemsSource="{x:Bind ViewModel.Songs, Mode=OneWay}"
-                          ItemTemplate="{StaticResource SongRowTemplate}"
+                          ItemTemplate="{StaticResource SongRowItemTemplate}"
                           ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                           SelectionMode="None" IsItemClickEnabled="True" ItemClick="SongRow_ItemClick"
                           AutomationProperties.AutomationId="LibrarySongsList" />
@@ -263,7 +271,7 @@
                     <TextBlock x:Uid="HistoryEmpty" Style="{StaticResource EmptyStateGuidanceStyle}" />
                 </StackPanel>
                 <ListView ItemsSource="{x:Bind ViewModel.History, Mode=OneWay}"
-                          ItemTemplate="{StaticResource SongRowTemplate}"
+                          ItemTemplate="{StaticResource SongRowItemTemplate}"
                           ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                           SelectionMode="None" IsItemClickEnabled="True" ItemClick="SongRow_ItemClick"
                           AutomationProperties.AutomationId="LibraryHistoryList" />

@@ -2,15 +2,16 @@
     x:Class="Omega.Views.SearchPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:vm="using:Omega.ViewModels">
+    xmlns:vm="using:Omega.ViewModels"
+    xmlns:controls="using:Omega.Controls">
 
     <!-- Search (design §9.3): the query arrives as a navigation
          parameter from the shell's sidebar search box (the page has
          no box of its own). SelectorBar tabs (Top results / Songs /
          Albums / Artists / Playlists). Each tab keeps its own
          collection in the ViewModel; the page only switches panel
-         visibility. The song-row template is the shared one in
-         App.xaml. No page subtitle (AUDIT_2 V-10): the title + the
+         visibility. Song rows are the shared SongRow control
+         (Controls/SongRow.xaml). No page subtitle (AUDIT_2 V-10): the title + the
          idle hint said the same sentence three times. -->
     <Page.Resources>
         <DataTemplate x:Key="TopResultRowTemplate" x:DataType="vm:SearchResultItemViewModel">
@@ -64,6 +65,13 @@
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Grid>
+        </DataTemplate>
+        <!-- Song rows: the shared SongRow control, fed the item by a
+             page-local template (page-local DataTemplates with x:Bind
+             are codegen-proven here; the merged-dictionary template
+             this replaces never evaluated its bindings — D1). -->
+        <DataTemplate x:Key="SongRowItemTemplate" x:DataType="vm:SongItemViewModel">
+            <controls:SongRow ViewModel="{x:Bind}" />
         </DataTemplate>
     </Page.Resources>
 
@@ -149,7 +157,7 @@
                             AutomationProperties.AutomationId="SearchSectionRetrySongs" />
                 </StackPanel>
                 <ListView ItemsSource="{x:Bind ViewModel.Songs, Mode=OneWay}"
-                          ItemTemplate="{StaticResource SongRowTemplate}"
+                          ItemTemplate="{StaticResource SongRowItemTemplate}"
                           ItemContainerStyle="{StaticResource RowItemContainerStyle}"
                           SelectionMode="None" IsItemClickEnabled="True"
                           ItemClick="SongRow_ItemClick"
