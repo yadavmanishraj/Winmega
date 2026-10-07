@@ -23,8 +23,24 @@ namespace Omega.Controls;
 /// Everything here is panel-scoped: visuals are built on Loaded,
 /// loops run only while the panel is alive and not idle, and
 /// <see cref="TeardownFx"/> (from DisposePanel) stops and releases
-/// the lot. Mode Off builds nothing at all: the XAML's static
-/// HeroTintBrush treatment is the whole background, as before.
+/// the lot. Mode Off builds no visuals: the panel background is a
+/// flat brush instead — the current track's theme-adjusted Base
+/// colour when a palette exists, the XAML's static HeroTintBrush
+/// treatment otherwise.
+///
+/// The panel's background colour rule (Manish, 2026-10-08): the
+/// background IS the current track's dominant colour, adjusted
+/// for the app theme — a shade family under the dark theme
+/// (Deep ×0.20 / Base ×0.30 / Lift ×0.48 of Dominant), a tint
+/// family under the light theme (Dominant lerped toward white:
+/// Deep 0.68 / Base 0.80 / Lift 0.90). Every background surface —
+/// the FX gradient, blobs, particles, glow, the Off-mode flat
+/// brush, the artwork placeholder — consumes the one family
+/// (<see cref="ComputeFamily"/>), so the whole card reads as a
+/// single colour: the track's. The family is also the legibility
+/// mechanism (light tint + theme-dark text, dark shade +
+/// theme-light text), which is why the original build's separate
+/// scrim sprite is gone.
 /// All motion lives on the Composition layer — the UI thread only
 /// swaps brush colours on track change and eases the Pulse
 /// amplitude on play/pause; nothing here touches layout, so the
@@ -43,8 +59,8 @@ public sealed partial class NowPlayingPanel
 
     // Reference space the FX geometry is authored in (the polish
     // spec's default panel). Blob/particle layers scale uniformly
-    // from it by host width; the base gradient and scrim bind to the
-    // host size exactly.
+    // from it by host width; the base gradient binds to the host
+    // size exactly.
     private const float FxReferenceWidth = 344f;
     private const float FxReferenceHeight = 800f;
 
@@ -74,6 +90,14 @@ public sealed partial class NowPlayingPanel
     private int _paletteGeneration;
     private int _colorSwapGeneration;
 
+    // Off-mode flat background bookkeeping: which palette the tint
+    // borders currently show (null = the static HeroTintBrush
+    // treatment) under which theme — the change guard that keeps
+    // the 500 ms sync ticks from repainting an unchanged flat
+    // background.
+    private ArtworkPalette? _flatPalette;
+    private ElementTheme _flatTheme;
+
     private static FxMode ParseFxMode(string? value) => value switch
     {
         "Off" => FxMode.Off,
@@ -102,13 +126,10 @@ public sealed partial class NowPlayingPanel
 
     private async Task RefreshPaletteAsync()
     {
-        // The palette only feeds the FX layer; with the mode Off
-        // there is nothing to feed, so the decode never runs.
-        if (_fxMode == FxMode.Off)
-        {
-            return;
-        }
-
+        // The palette feeds every mode now: the FX layer's family
+        // in Aurora/Particles/Pulse, the flat Base brush in Off —
+        // so the decode runs regardless of mode (it is cached per
+        // song by the service, and never blocks the panel opening).
         Song? song = ViewModel.CurrentSong;
         int generation = ++_paletteGeneration;
         ArtworkPalette? palette = null;
@@ -129,22 +150,95 @@ public sealed partial class NowPlayingPanel
             return;
         }
 
-        // A failed/absent extraction falls back to the static-tint
-        // family rather than leaving the previous song's colours up.
-        if (palette is not null)
+        // Null on a failed/absent extraction: the apply paths
+        // substitute the static fallback family rather than
+        // leaving the previous song's colours up.
+        _songPalette = palette;
+
+        if (_fxMode == FxMode.Off)
         {
-            _songPalette = palette;
-        }
-        else if (_fallbackPalette is not null)
-        {
-            _songPalette = _fallbackPalette;
+            ApplyFlatBackground();
         }
         else
         {
-            return; // Pre-init with nothing to show yet; InitializeFx seeds the fallback.
+            UpdateFxColors(animate: true);
+        }
+    }
+
+    /// <summary>
+    /// Off mode's background: a flat brush of the current track's
+    /// theme-adjusted Base colour on the two tint borders (the
+    /// same elements the FX path un-tints), with the artwork
+    /// placeholder lifted one step (family Lift) so the tile still
+    /// reads as a tile on the coloured card. Idle, or no palette
+    /// for the current song, restores the static HeroTintBrush
+    /// treatment exactly as before this feature. Change-guarded:
+    /// the sync ticks call this constantly.
+    /// </summary>
+    private void ApplyFlatBackground(bool force = false)
+    {
+        if (_fxMode != FxMode.Off || _disposed)
+        {
+            return;
         }
 
-        UpdateFxColors(animate: true);
+        ArtworkPalette? target = _fxCalm ? null : _songPalette;
+        if (!force && target == _flatPalette && ActualTheme == _flatTheme)
+        {
+            return;
+        }
+
+        _flatPalette = target;
+        _flatTheme = ActualTheme;
+        if (target is null)
+        {
+            Brush? tint = GetThemeBrush("HeroTintBrush");
+            HeaderTintBorder.Background = tint;
+            HeroTintBorder.Background = tint;
+            if (GetThemeBrush("LayerFillColorAltBrush") is Brush placeholder)
+            {
+                ArtworkPlaceholder.Background = placeholder;
+            }
+        }
+        else
+        {
+            FxColorFamily family = ComputeFamily(target);
+            var brush = new SolidColorBrush(family.Base);
+            HeaderTintBorder.Background = brush;
+            HeroTintBorder.Background = brush;
+            ArtworkPlaceholder.Background = new SolidColorBrush(family.Lift);
+        }
+    }
+
+    /// <summary>
+    /// A theme flip while the panel is open: theme resources
+    /// resolve to the new theme from here on, so the fallback
+    /// family (synthesised from the theme's HeroTintBrush) is
+    /// rebuilt and whatever is showing is repainted under the new
+    /// theme — instantly. The dip/cross-fade belongs to track
+    /// changes; a pure theme flip re-aims the same palette's
+    /// family with no animation.
+    /// </summary>
+    private void FxOnActualThemeChanged(FrameworkElement sender, object args)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (_fallbackPalette is not null)
+        {
+            _fallbackPalette = FallbackPalette();
+        }
+
+        if (_fxMode == FxMode.Off)
+        {
+            ApplyFlatBackground(force: true);
+        }
+        else if (_fxReady)
+        {
+            UpdateFxColors(animate: false, force: true);
+        }
     }
 
     private ArtworkPalette FallbackPalette()
@@ -167,6 +261,108 @@ public sealed partial class NowPlayingPanel
 
     private static Color WithAlpha(Color color, byte alpha) =>
         Color.FromArgb(alpha, color.R, color.G, color.B);
+
+    private static readonly Color White = Color.FromArgb(255, 255, 255, 255);
+
+    private static Color LerpColor(Color from, Color to, float amount) => Color.FromArgb(
+        (byte)(from.A + ((to.A - from.A) * amount)),
+        (byte)(from.R + ((to.R - from.R) * amount)),
+        (byte)(from.G + ((to.G - from.G) * amount)),
+        (byte)(from.B + ((to.B - from.B) * amount)));
+
+    // ------------------------------------------------------------------
+    // The colour family: ONE theme-adjusted derivation of a
+    // palette that every background surface consumes, so the card
+    // reads as the track's colour and nothing else. Deep/Base/Lift
+    // are the background ramp (gradient stops Deep → Base → Deep,
+    // the Off-mode flat brush is Base, the artwork placeholder is
+    // Lift); the blob/particle/glow colours are their palette
+    // roles tempered 40% toward Base (see ComputeFamily).
+    // ------------------------------------------------------------------
+
+    private sealed record FxColorFamily(
+        Color Deep,
+        Color Base,
+        Color Lift,
+        Color BlobA,
+        Color BlobB,
+        Color ParticleA,
+        Color ParticleB,
+        Color ParticleC,
+        Color Glow);
+
+    /// <summary>
+    /// The family for the palette currently targeted: the fallback
+    /// palette keeps its authored roles (<see cref="FamilyFromRoles"/>);
+    /// a real track palette gets the theme-adjusted derivation
+    /// (<see cref="ComputeFamily"/>).
+    /// </summary>
+    private FxColorFamily FamilyFor(ArtworkPalette palette) =>
+        ReferenceEquals(palette, _fallbackPalette)
+            ? FamilyFromRoles(palette)
+            : ComputeFamily(palette);
+
+    /// <summary>
+    /// The background rule (Manish, 2026-10-08): the panel
+    /// background is the track's Dominant colour, LIGHTER under
+    /// the light theme (lerped toward white — Base 0.80, Deep
+    /// 0.68, Lift 0.90) and DARKER under the dark theme (scaled —
+    /// Base ×0.30, Deep ×0.20, Lift ×0.48). Blob, particle and
+    /// glow colours keep their Vibrant/Mid/Dominant roles but are
+    /// blended 40% toward Base, so a cover whose vibrant accent is
+    /// a contrasting hue cannot turn the card into a rainbow: one
+    /// colour family throughout.
+    /// </summary>
+    private FxColorFamily ComputeFamily(ArtworkPalette palette)
+    {
+        Color dominant = palette.Dominant;
+        Color baseColor;
+        Color deep;
+        Color lift;
+        if (ActualTheme == ElementTheme.Light)
+        {
+            baseColor = LerpColor(dominant, White, 0.80f);
+            deep = LerpColor(dominant, White, 0.68f);
+            lift = LerpColor(dominant, White, 0.90f);
+        }
+        else
+        {
+            baseColor = ScaleColor(dominant, 0.30f);
+            deep = ScaleColor(dominant, 0.20f);
+            lift = ScaleColor(dominant, 0.48f);
+        }
+
+        return new FxColorFamily(
+            deep,
+            baseColor,
+            lift,
+            LerpColor(palette.Vibrant, baseColor, 0.40f),
+            LerpColor(palette.Mid, baseColor, 0.40f),
+            LerpColor(palette.Vibrant, baseColor, 0.40f),
+            LerpColor(palette.Mid, baseColor, 0.40f),
+            LerpColor(palette.Dominant, baseColor, 0.40f),
+            LerpColor(palette.Vibrant, baseColor, 0.40f));
+    }
+
+    /// <summary>
+    /// The fallback palette is synthesised from the theme's own
+    /// HeroTintBrush — already theme-adjusted by construction —
+    /// so its family is its roles verbatim: gradient Deep/Base
+    /// = Dark/Mid, Lift = Dominant, accents unblended. Running it
+    /// through <see cref="ComputeFamily"/> would double-adjust
+    /// it; this keeps the idle and extraction-failure surfaces
+    /// exactly as they rendered before the colour rule.
+    /// </summary>
+    private static FxColorFamily FamilyFromRoles(ArtworkPalette palette) => new(
+        palette.Dark,
+        palette.Mid,
+        palette.Dominant,
+        palette.Vibrant,
+        palette.Mid,
+        palette.Vibrant,
+        palette.Mid,
+        palette.Dominant,
+        palette.Vibrant);
 
     // ------------------------------------------------------------------
     // Construction
@@ -236,12 +432,12 @@ public sealed partial class NowPlayingPanel
         catch (Exception)
         {
             // Composition hosting is the wave's risk area: any
-            // failure degrades to the pre-FX panel (static tint,
-            // borders restored) rather than a broken surface.
+            // failure degrades to the Off behaviour (flat Base
+            // brush when a palette exists, the static tint
+            // otherwise) rather than a broken surface.
             TeardownFx();
             _fxMode = FxMode.Off;
-            HeaderTintBorder.Background = GetThemeBrush("HeroTintBrush");
-            HeroTintBorder.Background = GetThemeBrush("HeroTintBrush");
+            ApplyFlatBackground(force: true);
         }
     }
 
@@ -275,17 +471,13 @@ public sealed partial class NowPlayingPanel
         _fxDisposables.Add(sprite);
         _fxRoot!.Children.InsertAtTop(sprite);
 
-        // Legibility scrim (the mock's rule: text sits on the
-        // scrim, not on the colour). Theme-aware: black over the
-        // dark gradient, white over the light one.
-        Color scrimColor = ActualTheme == ElementTheme.Light
-            ? Color.FromArgb(77, 255, 255, 255)
-            : Color.FromArgb(46, 0, 0, 0);
-        var scrim = compositor.CreateSpriteVisual();
-        scrim.Brush = compositor.CreateColorBrush(scrimColor);
-        BindSize(scrim, hostVisual);
-        _fxDisposables.Add(scrim);
-        _fxRoot.Children.InsertAtTop(scrim);
+        // No legibility scrim anymore: the original build painted
+        // one (black 18% dark / white 30% light) because the
+        // gradient ran on the raw palette roles. The stops now
+        // come from the theme-adjusted family, which IS the
+        // legibility mechanism — a light tint under theme-dark
+        // text, a dark shade under theme-light text — so a second
+        // wash would only mute the track's colour.
     }
 
     private void BuildBlobs(Visual hostVisual)
@@ -543,7 +735,7 @@ public sealed partial class NowPlayingPanel
     // root while the brush stops change underneath it.
     // ------------------------------------------------------------------
 
-    private void UpdateFxColors(bool animate)
+    private void UpdateFxColors(bool animate, bool force = false)
     {
         if (!_fxReady)
         {
@@ -551,24 +743,29 @@ public sealed partial class NowPlayingPanel
         }
 
         ArtworkPalette target = (_fxCalm ? _fallbackPalette : _songPalette) ?? _fallbackPalette!;
-        if (target == _appliedPalette)
+        if (!force && target == _appliedPalette)
         {
             return;
         }
 
+        // The stops are painted from the target's theme-adjusted
+        // family, computed NOW: a theme flip re-aims the same
+        // palette under the new theme via the force path.
+        FxColorFamily family = FamilyFor(target);
         if (animate && _motionEnabled && _fxRoot is not null && _compositor is not null)
         {
-            _ = DipSwapAsync(target);
+            _ = DipSwapAsync(target, family);
         }
         else
         {
             _colorSwapGeneration++;
-            SwapColors(target);
+            SwapColors(family);
+            ApplyPlaceholderColor(family);
             _appliedPalette = target;
         }
     }
 
-    private async Task DipSwapAsync(ArtworkPalette target)
+    private async Task DipSwapAsync(ArtworkPalette target, FxColorFamily family)
     {
         int generation = ++_colorSwapGeneration;
         try
@@ -586,7 +783,8 @@ public sealed partial class NowPlayingPanel
                 return;
             }
 
-            SwapColors(target);
+            SwapColors(family);
+            ApplyPlaceholderColor(family);
             _appliedPalette = target;
         }
         catch (Exception)
@@ -596,22 +794,37 @@ public sealed partial class NowPlayingPanel
         }
     }
 
-    private void SwapColors(ArtworkPalette palette)
+    private void SwapColors(FxColorFamily family)
     {
-        SetStops(_baseStops, palette.Dark, palette.Mid, palette.Dark);
-        SetStops(_blobAStops, WithAlpha(palette.Vibrant, 190), WithAlpha(palette.Vibrant, 0));
-        SetStops(_blobBStops, WithAlpha(palette.Mid, 170), WithAlpha(palette.Mid, 0));
+        // Gradient geometry unchanged (offsets 0 / 0.55 / 1); the
+        // stops are the family's ramp now: Deep → Base → Deep.
+        SetStops(_baseStops, family.Deep, family.Base, family.Deep);
+        SetStops(_blobAStops, WithAlpha(family.BlobA, 190), WithAlpha(family.BlobA, 0));
+        SetStops(_blobBStops, WithAlpha(family.BlobB, 170), WithAlpha(family.BlobB, 0));
         if (_particleStops is not null)
         {
-            SetStops(_particleStops[0], WithAlpha(palette.Vibrant, 160), WithAlpha(palette.Vibrant, 0));
-            SetStops(_particleStops[1], WithAlpha(palette.Mid, 140), WithAlpha(palette.Mid, 0));
-            SetStops(_particleStops[2], WithAlpha(palette.Dominant, 120), WithAlpha(palette.Dominant, 0));
+            SetStops(_particleStops[0], WithAlpha(family.ParticleA, 160), WithAlpha(family.ParticleA, 0));
+            SetStops(_particleStops[1], WithAlpha(family.ParticleB, 140), WithAlpha(family.ParticleB, 0));
+            SetStops(_particleStops[2], WithAlpha(family.ParticleC, 120), WithAlpha(family.ParticleC, 0));
         }
 
         if (_glowStops is not null)
         {
-            SetStops(_glowStops, WithAlpha(palette.Vibrant, 150), WithAlpha(palette.Vibrant, 0));
+            SetStops(_glowStops, WithAlpha(family.Glow, 150), WithAlpha(family.Glow, 0));
         }
+    }
+
+    /// <summary>
+    /// The artwork placeholder tile takes the family's Lift: it
+    /// sits ON the Base background, so one step up the ramp keeps
+    /// it reading as a tile instead of a hole in the card. (In
+    /// idle the whole player body is collapsed, so this is only
+    /// ever seen while a song is current but its cover is missing
+    /// or still loading.)
+    /// </summary>
+    private void ApplyPlaceholderColor(FxColorFamily family)
+    {
+        ArtworkPlaceholder.Background = new SolidColorBrush(family.Lift);
     }
 
     private static void SetStops(CompositionColorGradientStop[]? stops, params Color[] colors)
@@ -633,6 +846,17 @@ public sealed partial class NowPlayingPanel
 
     private void FxOnIdleChanged(bool idle)
     {
+        // Off mode has no layer to park: idle flips the flat
+        // background between the static tint (idle) and the
+        // track's Base (a song is current). ApplyFlatBackground
+        // is change-guarded, so the per-tick calls are free.
+        if (_fxMode == FxMode.Off)
+        {
+            _fxCalm = idle;
+            ApplyFlatBackground();
+            return;
+        }
+
         if (idle == _fxCalm && _fxReady)
         {
             return;
@@ -785,6 +1009,7 @@ public sealed partial class NowPlayingPanel
         _particleStops = null;
         _glowStops = null;
         _appliedPalette = null;
+        _flatPalette = null;
         _fxReady = false;
     }
 }

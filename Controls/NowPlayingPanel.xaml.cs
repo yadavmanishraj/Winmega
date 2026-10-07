@@ -81,6 +81,11 @@ public sealed partial class NowPlayingPanel : UserControl
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         Unloaded += OnPanelUnloaded;
         Loaded += OnPanelLoaded;
+
+        // The background colour family is theme-adjusted, so a
+        // theme flip while the panel is open repaints it
+        // (NowPlayingPanel.Fx.cs).
+        ActualThemeChanged += FxOnActualThemeChanged;
         RefreshFromViewModel();
         BuildByline();
         _ = RefreshFavoriteAsync();
@@ -127,6 +132,7 @@ public sealed partial class NowPlayingPanel : UserControl
         }
 
         _disposed = true;
+        ActualThemeChanged -= FxOnActualThemeChanged;
         TeardownFx();
         ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         ViewModel.Dispose();

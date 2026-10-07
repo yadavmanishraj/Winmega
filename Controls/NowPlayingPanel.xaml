@@ -26,8 +26,13 @@
          disc. Behind everything sits the FX layer (NOW_PLAYING_FX):
          a Composition host (FxHost) whose visuals paint the
          palette-driven gradient / particles / pulse for the mode
-         read from settings at construction; mode Off leaves the
-         static HeroTintBrush treatment below untouched.
+         read from settings at construction. The background colour
+         rule (Manish, 2026-10-08): the background is the current
+         track's dominant colour, theme-adjusted (lighter in the
+         light theme, darker in the dark theme) — mode Off paints
+         the header/hero tint borders flat with that colour's Base
+         when a palette exists, and leaves the static HeroTintBrush
+         treatment below untouched otherwise.
 
          Bindings are compiled {x:Bind} rooted at this control's own
          PlayerViewModel instance (transient, disposed with the
