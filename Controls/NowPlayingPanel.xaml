@@ -320,7 +320,7 @@
                                   AutomationProperties.AutomationId="NowPlayingShuffle"
                                   AutomationProperties.Name="Shuffle off">
                         <Grid>
-                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" FontSize="20" />
+                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" Width="20" Height="20" />
                             <Ellipse x:Name="ShuffleStateDot" Width="4" Height="4"
                                      HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                      Margin="0,0,0,6" Visibility="Collapsed"
@@ -332,7 +332,7 @@
                             ToolTipService.ToolTip="Previous"
                             AutomationProperties.AutomationId="NowPlayingPrevious"
                             AutomationProperties.Name="Previous track">
-                        <SymbolIcon Symbol="Previous" FontSize="20" />
+                        <SymbolIcon Symbol="Previous" Width="20" Height="20" />
                     </Button>
                     <Button Style="{StaticResource TransportPrimaryButtonStyle}"
                             Command="{x:Bind ViewModel.TogglePlayPauseCommand}"
@@ -346,7 +346,7 @@
                             ToolTipService.ToolTip="Next"
                             AutomationProperties.AutomationId="NowPlayingNext"
                             AutomationProperties.Name="Next track">
-                        <SymbolIcon Symbol="Next" FontSize="20" />
+                        <SymbolIcon Symbol="Next" Width="20" Height="20" />
                     </Button>
                     <Button x:Name="RepeatButton"
                             Style="{StaticResource PanelTransportButtonStyle}"
@@ -354,7 +354,7 @@
                             AutomationProperties.AutomationId="NowPlayingRepeat"
                             AutomationProperties.Name="Repeat">
                         <Grid>
-                            <SymbolIcon x:Name="RepeatIcon" Symbol="RepeatAll" FontSize="20" />
+                            <SymbolIcon x:Name="RepeatIcon" Symbol="RepeatAll" Width="20" Height="20" />
                             <Ellipse x:Name="RepeatStateDot" Width="4" Height="4"
                                      HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                      Margin="0,0,0,6" Visibility="Collapsed"
