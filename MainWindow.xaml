@@ -483,26 +483,16 @@
 
                                     <!-- Up next: the live queue minus the
                                          current track (rebuilt in
-                                         code-behind). Drag-reorder: the
-                                         ListView rearranges the wrapper
-                                         rows live; on drop the shell
-                                         commits the dropped order via
-                                         PlayerService.ReorderQueue,
-                                         which permutes the play order
-                                         (a queue-only permutation would
-                                         leave the audible sequence
-                                         unchanged — the service's remap
-                                         follows songs, not slots). -->
+                                         code-behind) — a queue-order
+                                         projection: rows jump on tap,
+                                         remove on hover, Clear empties
+                                         up-next. No drag-reorder. -->
                                     <ListView x:Name="QueueFlyoutList" Grid.Row="3"
                                               Margin="8,0,8,8"
                                               ItemsSource="{x:Bind UpNextItems}"
                                               SelectionMode="None"
                                               IsItemClickEnabled="True"
-                                              CanReorderItems="True"
-                                              AllowDrop="True"
                                               ItemClick="QueueFlyoutList_ItemClick"
-                                              DragItemsStarting="QueueFlyoutList_DragItemsStarting"
-                                              DragItemsCompleted="QueueFlyoutList_DragItemsCompleted"
                                               AutomationProperties.AutomationId="QueueFlyoutList"
                                               AutomationProperties.Name="Up next">
                                         <ListView.ItemContainerStyle>
