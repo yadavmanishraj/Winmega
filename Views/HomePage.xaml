@@ -9,7 +9,7 @@
          header + a 2-row card band (ScrollViewer + ItemsRepeater,
          UniformGridLayout Orientation=Vertical,
          MaximumRowsOrColumns=2) that scrolls horizontally
-         as a whole. Two card types only: EntityCardTemplate (200px
+         as a whole. Two card types only: EntityCardTemplate (180px
          artwork) and the 304x72 song cards (SongCardTemplate for real
          songs, TrendingCardTemplate for HomeItemViewModel rows).
          Chevron paging + wheel-to-horizontal chaining live in
@@ -39,7 +39,7 @@
              subtitle. The cell is artwork + 16 (cell sizes
              come from code-behind per responsive tier); the frame
              is a STRICT square — Width/Height are pinned to the
-             tier's side (200/176/152) by code-behind
+             tier's side (180/160/140) by code-behind
              (ApplyArtworkFrameSize; the XAML values are the tier-0
              default). It must NOT go back to a star-sized row: the
              frame's height drifted from its width and UniformToFill
@@ -57,7 +57,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Border Grid.Row="0" CornerRadius="8" Width="200" Height="200"
+                <Border Grid.Row="0" CornerRadius="8" Width="180" Height="180"
                         HorizontalAlignment="Left"
                         Background="{ThemeResource HeroTintBrush}"
                         AutomationProperties.AutomationId="HomeEntityArtwork">
@@ -362,7 +362,7 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <ScrollViewer x:Name="NewAlbumsScroller" Height="552"
+                <ScrollViewer x:Name="NewAlbumsScroller" Height="512"
                               HorizontalScrollMode="Enabled"
                               HorizontalScrollBarVisibility="Hidden"
                               VerticalScrollMode="Disabled"
@@ -376,7 +376,7 @@
                                    ElementClearing="EntityRepeater_ElementClearing">
                         <ItemsRepeater.Layout>
                             <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="2"
-                                               MinItemWidth="216" MinItemHeight="268" />
+                                               MinItemWidth="196" MinItemHeight="248" />
                         </ItemsRepeater.Layout>
                     </ItemsRepeater>
                 </ScrollViewer>
@@ -403,7 +403,7 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <ScrollViewer x:Name="ChartsScroller" Height="552"
+                <ScrollViewer x:Name="ChartsScroller" Height="512"
                               HorizontalScrollMode="Enabled"
                               HorizontalScrollBarVisibility="Hidden"
                               VerticalScrollMode="Disabled"
@@ -417,7 +417,7 @@
                                    ElementClearing="EntityRepeater_ElementClearing">
                         <ItemsRepeater.Layout>
                             <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="2"
-                                               MinItemWidth="216" MinItemHeight="268" />
+                                               MinItemWidth="196" MinItemHeight="248" />
                         </ItemsRepeater.Layout>
                     </ItemsRepeater>
                 </ScrollViewer>
@@ -444,7 +444,7 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <ScrollViewer x:Name="TopPlaylistsScroller" Height="552"
+                <ScrollViewer x:Name="TopPlaylistsScroller" Height="512"
                               HorizontalScrollMode="Enabled"
                               HorizontalScrollBarVisibility="Hidden"
                               VerticalScrollMode="Disabled"
@@ -458,7 +458,7 @@
                                    ElementClearing="EntityRepeater_ElementClearing">
                         <ItemsRepeater.Layout>
                             <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="2"
-                                               MinItemWidth="216" MinItemHeight="268" />
+                                               MinItemWidth="196" MinItemHeight="248" />
                         </ItemsRepeater.Layout>
                     </ItemsRepeater>
                 </ScrollViewer>
@@ -485,7 +485,7 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <ScrollViewer x:Name="DiscoverScroller" Height="552"
+                <ScrollViewer x:Name="DiscoverScroller" Height="512"
                               HorizontalScrollMode="Enabled"
                               HorizontalScrollBarVisibility="Hidden"
                               VerticalScrollMode="Disabled"
@@ -499,7 +499,7 @@
                                    ElementClearing="EntityRepeater_ElementClearing">
                         <ItemsRepeater.Layout>
                             <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="2"
-                                               MinItemWidth="216" MinItemHeight="268" />
+                                               MinItemWidth="196" MinItemHeight="248" />
                         </ItemsRepeater.Layout>
                     </ItemsRepeater>
                 </ScrollViewer>
