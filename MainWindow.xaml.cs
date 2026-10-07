@@ -64,7 +64,6 @@ public sealed partial class MainWindow : Window
     private InputNonClientPointerSource? _nonClientSource;
     private RectInt32[] _passthroughRects = Array.Empty<RectInt32>();
     private bool _queueFlyoutOpen;
-    private bool _queueDragInProgress;
     private bool _lyricsFlyoutOpen;
     private CancellationTokenSource? _lyricsFlyoutCts;
     private string? _lyricsFlyoutSongId;
@@ -1022,16 +1021,6 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void SyncQueueFlyout()
     {
-        // A drag-reorder is in flight: the ListView is rearranging
-        // _upNextItems itself, and a rebuild here (Clear + refill)
-        // would cancel or corrupt the gesture — the queue and track
-        // events that land mid-drag are picked up by the completion
-        // handler's unconditional resync instead.
-        if (_queueDragInProgress)
-        {
-            return;
-        }
-
         ObservableCollection<Song> queue = Player.Queue;
         int currentIndex = Player.CurrentQueueIndex;
         bool hasCurrent = Player.CurrentSong is not null;
@@ -1063,45 +1052,6 @@ public sealed partial class MainWindow : Window
             // Tap-to-jump; the flyout stays open and re-syncs onto
             // the new current track (StateChanged follows the jump).
             Player.PlayQueueItem(item.Song);
-        }
-    }
-
-    private void QueueFlyoutList_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-    {
-        // Bracket the gesture: while it runs, SyncQueueFlyout is
-        // suppressed (see its guard) so mid-drag queue/track events
-        // can't rebuild the wrapper list under the user's pointer.
-        _queueDragInProgress = true;
-    }
-
-    private void QueueFlyoutList_DragItemsCompleted(object sender, DragItemsCompletedEventArgs e)
-    {
-        if (e.DropResult != DataPackageOperation.None)
-        {
-            // The ListView has already rearranged _upNextItems into
-            // the dropped order; commit exactly that order. The
-            // wrappers keep their Song references through the drag,
-            // which is what the service validates and permutes by.
-            // The service call runs while the drag guard is still
-            // up, so the per-Move flyout syncs it raises are all
-            // suppressed in favour of the one resync below.
-            var droppedOrder = new List<Song>(_upNextItems.Count);
-            foreach (QueueFlyoutItem item in _upNextItems)
-            {
-                droppedOrder.Add(item.Song);
-            }
-
-            Player.ReorderQueue(droppedOrder);
-        }
-
-        _queueDragInProgress = false;
-
-        // Committed, cancelled, or rejected by the service as a
-        // stale snapshot (a track change landed mid-drag): the
-        // projection is rebuilt from live state either way.
-        if (_queueFlyoutOpen)
-        {
-            SyncQueueFlyout();
         }
     }
 

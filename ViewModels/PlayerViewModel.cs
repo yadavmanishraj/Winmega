@@ -176,14 +176,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>
-    /// Queue flyout drag-reorder commit: every queued song except
-    /// the current track, in the dropped order — the service makes
-    /// that order the play sequence (see PlayerService.ReorderQueue).
-    /// </summary>
-    public void ReorderQueue(IReadOnlyList<Song> upNextInOrder) =>
-        _player.ReorderQueue(upNextInOrder);
-
     /// <summary>Sleep-timer menu: null = off.</summary>
     public void SetSleepTimer(TimeSpan? duration) => _player.SetSleepTimer(duration);
 
