@@ -460,4 +460,13 @@
   <data name="RepeatOne" xml:space="preserve">
     <value>Repeat one</value>
   </data>
+
+  <!-- Audit fix wave (FX2 shell): LCD menu queue item + shell
+       navigation-failure surface. -->
+  <data name="OpenQueue.Text" xml:space="preserve">
+    <value>Open queue</value>
+  </data>
+  <data name="NavigationFailedMessage" xml:space="preserve">
+    <value>That page couldn't be opened.</value>
+  </data>
 </root>

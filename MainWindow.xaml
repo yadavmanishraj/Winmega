@@ -10,264 +10,372 @@
         <MicaBackdrop Kind="Base" />
     </Window.SystemBackdrop>
 
+    <!-- One transport language (AUDIT_2 V-02/V-03): the strip's
+         transport buttons wear the same subtle discs as the Now
+         Playing page's transport row, so glyphs read at a glance and
+         hover/pressed states have a surface. On-state adds shape —
+         a filled disc + a dot under the glyph (code-behind) — never
+         colour alone (A-4). -->
+    <Window.Resources>
+        <Style x:Key="StripTransportButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="StripTransportToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
     <!-- Shell (APPLE_LAYOUT_SPEC §1, supersedes design §9.1's
          SelectorBar strip + floating bar): a unified 64px title-bar
          strip — back + wordmark + endpoint status over the pane,
          transport cluster, the centred LCD well, and the
          volume/lyrics/queue cluster — over a NavigationView whose pane
          holds search, destinations, Library sub-sections and the
-         user's playlists. The strip is the window's drag region (set
-         in code-behind, where ExtendsContentIntoTitleBar must live);
-         its interactive children stay input-live. Green is spent the
-         way Apple spends red: selection pill, play fill, on-states —
-         never text or backgrounds (§0). -->
-    <Grid x:Name="RootGrid">
+         user's playlists. Row 0 is layered: a background Border is
+         the window's ONLY drag region (SetTitleBar target, set in
+         code-behind) and the strip's content Grid is a SIBLING above
+         it — no interactive element is a descendant of the drag
+         element, so slider drags and button manipulations are never
+         reinterpreted as window drags (POINTER QA F3). Green is
+         spent the way Apple spends red: selection pill, play fill,
+         on-states — never text or backgrounds (§0). -->
+    <Grid x:Name="RootGrid" SizeChanged="RootGrid_SizeChanged">
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Modifiers="Control" Key="F"
                                  Invoked="SearchAccelerator_Invoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="64" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <!-- ============ Row 0: unified strip ============ -->
-        <Grid x:Name="TitleBarStrip" Grid.Row="0" Loaded="TitleBarStrip_Loaded">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="260" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Row="0">
+            <!-- Drag surface only: transparent fill makes it
+                 hit-test visible (a null background would not be);
+                 it carries no content and no handlers. -->
+            <Border x:Name="TitleBarDragRegion" Background="Transparent" />
 
-            <!-- Left segment (over the pane): back, wordmark, status. -->
-            <Grid Grid.Column="0" ColumnSpacing="4" Padding="8,0,8,0">
+            <Grid x:Name="TitleBarStrip" Loaded="TitleBarStrip_Loaded">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="260" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Button x:Name="BackButton"
-                        Grid.Column="0"
-                        Width="40" Height="40" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        VerticalAlignment="Center"
-                        IsEnabled="False"
-                        ToolTipService.ToolTip="Back"
-                        AutomationProperties.AutomationId="ShellBack"
-                        AutomationProperties.Name="Back"
-                        Click="BackButton_Click">
-                    <SymbolIcon Symbol="Back" />
-                </Button>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
-                            VerticalAlignment="Center">
-                    <SymbolIcon Symbol="MusicInfo"
-                                Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                    <TextBlock x:Uid="AppWordmark"
-                               Style="{ThemeResource SubtitleTextBlockStyle}"
-                               VerticalAlignment="Center" />
-                </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
-                            HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Ellipse Width="10" Height="10"
-                             Fill="{ThemeResource SystemFillColorSuccessBrush}"
-                             VerticalAlignment="Center" />
-                    <TextBlock x:Uid="EndpointStatus"
-                               Style="{ThemeResource CaptionTextBlockStyle}"
-                               VerticalAlignment="Center" />
-                </StackPanel>
-            </Grid>
 
-            <!-- Transport cluster: binds PlayerViewModel (the page VM),
-                 not the shell mirror. Shuffle/repeat on-state = green
-                 glyph + state in the accessible name (code-behind). -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
-                        Margin="8,0,0,0" VerticalAlignment="Center">
-                <ToggleButton x:Name="ShuffleButton"
-                              Width="40" Height="40" Padding="0"
-                              Background="Transparent" BorderThickness="0"
-                              IsChecked="{x:Bind Player.IsShuffle, Mode=TwoWay}"
-                              ToolTipService.ToolTip="Shuffle"
-                              AutomationProperties.AutomationId="TransportShuffle"
-                              AutomationProperties.Name="Shuffle off">
-                    <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" />
-                </ToggleButton>
-                <Button Width="40" Height="40" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        Command="{x:Bind Player.PreviousTrackCommand}"
-                        ToolTipService.ToolTip="Previous"
-                        AutomationProperties.AutomationId="TransportPrevious"
-                        AutomationProperties.Name="Previous">
-                    <SymbolIcon Symbol="Previous" />
-                </Button>
-                <Button Width="40" Height="40" Padding="0"
-                        CornerRadius="20"
-                        Background="{ThemeResource AccentFillColorDefaultBrush}"
-                        Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
-                        Command="{x:Bind Player.TogglePlayPauseCommand}"
-                        ToolTipService.ToolTip="Play or pause"
-                        AutomationProperties.AutomationId="NowPlayingPlayPause"
-                        AutomationProperties.Name="Play or pause">
-                    <SymbolIcon Symbol="{x:Bind Player.PlayPauseSymbol, Mode=OneWay}"
-                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
-                </Button>
-                <Button Width="40" Height="40" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        Command="{x:Bind Player.NextTrackCommand}"
-                        ToolTipService.ToolTip="Next"
-                        AutomationProperties.AutomationId="TransportNext"
-                        AutomationProperties.Name="Next">
-                    <SymbolIcon Symbol="Next" />
-                </Button>
-                <Button x:Name="RepeatButton"
-                        Width="40" Height="40" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        Command="{x:Bind Player.CycleRepeatCommand}"
-                        ToolTipService.ToolTip="Repeat"
-                        AutomationProperties.AutomationId="TransportRepeat"
-                        AutomationProperties.Name="Repeat off">
-                    <SymbolIcon x:Name="RepeatIcon"
-                                Symbol="{x:Bind Player.RepeatSymbol, Mode=OneWay}" />
-                </Button>
-            </StackPanel>
-
-            <!-- LCD well: artwork + centred title/artist over a 2px
-                 progress hairline. The artwork/text zone is one Button
-                 (the NowPlayingOpen target carrying the well's single
-                 UIA name, refreshed in code-behind); the trailing •••
-                 menu is a sibling, never nested in that Button. -->
-            <Border Grid.Column="2"
-                    MaxWidth="640" Height="48"
-                    Margin="24,0"
-                    HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                    Background="{ThemeResource LayerFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{ThemeResource OverlayCornerRadius}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid Grid.Row="0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <Button x:Name="NowPlayingOpenButton"
-                                Grid.Column="0"
-                                Padding="0"
-                                Background="Transparent" BorderThickness="0"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                VerticalAlignment="Stretch"
-                                VerticalContentAlignment="Stretch"
-                                AutomationProperties.AutomationId="NowPlayingOpen"
-                                AutomationProperties.Name="Nothing playing"
-                                Click="NowPlayingOpen_Click">
-                            <Grid ColumnSpacing="8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="44" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Image Grid.Column="0"
-                                       Width="44" Height="44"
-                                       Stretch="UniformToFill"
-                                       Source="{x:Bind Player.CurrentArtworkSource, Mode=OneWay}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
-                                    <TextBlock Text="{x:Bind Player.CurrentTitle, Mode=OneWay}"
-                                               Style="{ThemeResource BodyStrongTextBlockStyle}"
-                                               TextAlignment="Center"
-                                               TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{x:Bind Player.CurrentArtist, Mode=OneWay}"
-                                               Style="{ThemeResource CaptionTextBlockStyle}"
-                                               Opacity="0.75"
-                                               TextAlignment="Center"
-                                               TextTrimming="CharacterEllipsis" />
-                                </StackPanel>
-                            </Grid>
-                        </Button>
-                        <Button x:Name="LcdMoreButton"
-                                Grid.Column="1"
-                                Width="40" Padding="0"
-                                Background="Transparent" BorderThickness="0"
-                                VerticalAlignment="Stretch"
-                                ToolTipService.ToolTip="More actions"
-                                AutomationProperties.AutomationId="LcdMore"
-                                AutomationProperties.Name="More actions">
-                            <SymbolIcon Symbol="More" />
-                            <Button.Flyout>
-                                <MenuFlyout>
-                                    <MenuFlyoutItem x:Uid="GoToNowPlaying"
-                                                    Click="NowPlayingOpen_Click" />
-                                </MenuFlyout>
-                            </Button.Flyout>
-                        </Button>
-                    </Grid>
-                    <!-- Progress at rest is neutral (spec §0): primary
-                         text fill over a faint track, never green. -->
-                    <ProgressBar Grid.Row="1"
-                                 Height="2"
-                                 Minimum="0"
-                                 Maximum="{x:Bind Player.DurationSeconds, Mode=OneWay}"
-                                 Value="{x:Bind Player.PositionSeconds, Mode=OneWay}"
-                                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"
-                                 Background="{ThemeResource TextFillColorDisabledBrush}" />
+                <!-- Left segment (over the pane): back, wordmark, status. -->
+                <Grid Grid.Column="0" ColumnSpacing="4" Padding="8,0,8,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="BackButton"
+                            Grid.Column="0"
+                            Width="40" Height="40" Padding="0"
+                            Background="Transparent" BorderThickness="0"
+                            VerticalAlignment="Center"
+                            IsEnabled="False"
+                            ToolTipService.ToolTip="Back"
+                            AutomationProperties.AutomationId="ShellBack"
+                            AutomationProperties.Name="Back"
+                            Click="BackButton_Click">
+                        <SymbolIcon Symbol="Back" />
+                    </Button>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                VerticalAlignment="Center">
+                        <SymbolIcon Symbol="MusicInfo"
+                                    Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                        <TextBlock x:Uid="AppWordmark"
+                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <!-- Endpoint status (AUDIT_3 M2): the dot + label
+                         reflect the last playback outcome (green =
+                         direct upstream OK, caution = a track just
+                         failed), driven from ShellViewModel state in
+                         code-behind — not a decorative constant. -->
+                    <StackPanel x:Name="EndpointStatusPanel"
+                                Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                                HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Ellipse x:Name="StatusDot" Width="10" Height="10"
+                                 Fill="{ThemeResource SystemFillColorSuccessBrush}"
+                                 VerticalAlignment="Center" />
+                        <TextBlock x:Name="EndpointStatusText" x:Uid="EndpointStatus"
+                                   Style="{ThemeResource CaptionTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
                 </Grid>
-            </Border>
 
-            <!-- Right cluster: volume, lyrics, queue. -->
-            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4"
-                        Margin="0,0,8,0" VerticalAlignment="Center">
-                <Button x:Name="VolumeButton"
-                        Width="40" Height="40" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        ToolTipService.ToolTip="Volume"
-                        AutomationProperties.AutomationId="VolumeButton"
-                        AutomationProperties.Name="Volume"
-                        Click="VolumeButton_Click">
-                    <SymbolIcon x:Name="VolumeIcon" Symbol="Volume" />
-                </Button>
-                <Slider x:Name="VolumeSlider"
-                        Width="100"
-                        Minimum="0" Maximum="100" StepFrequency="1"
-                        VerticalAlignment="Center"
-                        Value="{x:Bind Player.Volume, Mode=TwoWay}"
-                        AutomationProperties.AutomationId="VolumeSlider"
-                        AutomationProperties.Name="Volume" />
-                <Button Width="40" Height="40" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        ToolTipService.ToolTip="Lyrics"
-                        AutomationProperties.AutomationId="LyricsButton"
-                        AutomationProperties.Name="Lyrics"
-                        Click="NowPlayingOpen_Click">
-                    <SymbolIcon Symbol="Message" />
-                </Button>
-                <Button Width="40" Height="40" Padding="0"
-                        Background="Transparent" BorderThickness="0"
-                        ToolTipService.ToolTip="Queue"
-                        AutomationProperties.AutomationId="QueueButton"
-                        AutomationProperties.Name="Queue"
-                        Click="NowPlayingOpen_Click">
-                    <SymbolIcon Symbol="Bullets" />
-                </Button>
-            </StackPanel>
+                <!-- Transport cluster: binds PlayerViewModel (the page
+                     VM), not the shell mirror. Shuffle/repeat on-state
+                     = filled disc + green glyph + dot (code-behind),
+                     plus the state in the accessible name. -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                            Margin="8,0,0,0" VerticalAlignment="Center">
+                    <ToggleButton x:Name="ShuffleButton"
+                                  Style="{StaticResource StripTransportToggleStyle}"
+                                  IsChecked="{x:Bind Player.IsShuffle, Mode=TwoWay}"
+                                  ToolTipService.ToolTip="Shuffle"
+                                  AutomationProperties.AutomationId="TransportShuffle"
+                                  AutomationProperties.Name="Shuffle off">
+                        <Grid>
+                            <Ellipse x:Name="ShuffleDisc" Width="40" Height="40" />
+                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" FontSize="20" />
+                            <Ellipse x:Name="ShuffleStateDot" Width="4" Height="4"
+                                     HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                     Margin="0,0,0,4" Visibility="Collapsed"
+                                     Fill="{ThemeResource AccentFillColorDefaultBrush}" />
+                        </Grid>
+                    </ToggleButton>
+                    <Button Style="{StaticResource StripTransportButtonStyle}"
+                            Command="{x:Bind Player.PreviousTrackCommand}"
+                            ToolTipService.ToolTip="Previous"
+                            AutomationProperties.AutomationId="TransportPrevious"
+                            AutomationProperties.Name="Previous">
+                        <SymbolIcon Symbol="Previous" FontSize="20"
+                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                    </Button>
+                    <Button Style="{StaticResource StripTransportButtonStyle}"
+                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                            Command="{x:Bind Player.TogglePlayPauseCommand}"
+                            ToolTipService.ToolTip="Play or pause"
+                            AutomationProperties.AutomationId="NowPlayingPlayPause"
+                            AutomationProperties.Name="Play or pause">
+                        <SymbolIcon Symbol="{x:Bind Player.PlayPauseSymbol, Mode=OneWay}" FontSize="20"
+                                    Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                    </Button>
+                    <Button Style="{StaticResource StripTransportButtonStyle}"
+                            Command="{x:Bind Player.NextTrackCommand}"
+                            ToolTipService.ToolTip="Next"
+                            AutomationProperties.AutomationId="TransportNext"
+                            AutomationProperties.Name="Next">
+                        <SymbolIcon Symbol="Next" FontSize="20"
+                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                    </Button>
+                    <Button x:Name="RepeatButton"
+                            Style="{StaticResource StripTransportButtonStyle}"
+                            Command="{x:Bind Player.CycleRepeatCommand}"
+                            ToolTipService.ToolTip="Repeat"
+                            AutomationProperties.AutomationId="TransportRepeat"
+                            AutomationProperties.Name="Repeat off">
+                        <Grid>
+                            <Ellipse x:Name="RepeatDisc" Width="40" Height="40" />
+                            <SymbolIcon x:Name="RepeatIcon" FontSize="20"
+                                        Symbol="{x:Bind Player.RepeatSymbol, Mode=OneWay}" />
+                            <Ellipse x:Name="RepeatStateDot" Width="4" Height="4"
+                                     HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                     Margin="0,0,0,4" Visibility="Collapsed"
+                                     Fill="{ThemeResource AccentFillColorDefaultBrush}" />
+                        </Grid>
+                    </Button>
+                </StackPanel>
 
-            <!-- Caption-button clearance: width set from
-                 AppWindow.TitleBar.RightInset in code-behind. -->
-            <Border x:Name="CaptionInsetSpacer" Grid.Column="4" />
+                <!-- LCD well: artwork + centred title/artist over a 2px
+                     progress hairline. The artwork/text zone is one
+                     Button (the NowPlayingOpen target carrying the
+                     well's single UIA name, refreshed in code-behind);
+                     the trailing ••• menu is a sibling, never nested
+                     in that Button. Width is capped (AUDIT_2 V-01):
+                     a quiet readout, not a banner; idle shows a
+                     placeholder artwork tile (code-behind toggles it
+                     against CurrentArtworkSource). -->
+                <Border Grid.Column="2"
+                        MaxWidth="460" Height="48"
+                        Margin="24,0"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{ThemeResource OverlayCornerRadius}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="NowPlayingOpenButton"
+                                    Grid.Column="0"
+                                    Padding="0"
+                                    Background="Transparent" BorderThickness="0"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    VerticalAlignment="Stretch"
+                                    VerticalContentAlignment="Stretch"
+                                    AutomationProperties.AutomationId="NowPlayingOpen"
+                                    AutomationProperties.Name="Nothing playing"
+                                    Click="NowPlayingOpen_Click">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="44" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid Grid.Column="0" Width="44" Height="44">
+                                        <Border x:Name="ArtworkPlaceholder"
+                                                Width="44" Height="44"
+                                                Background="{ThemeResource LayerFillColorAltBrush}"
+                                                CornerRadius="4">
+                                            <SymbolIcon Symbol="MusicInfo"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center" />
+                                        </Border>
+                                        <Image Width="44" Height="44"
+                                               Stretch="UniformToFill"
+                                               Source="{x:Bind Player.CurrentArtworkSource, Mode=OneWay}" />
+                                    </Grid>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                                        <TextBlock Text="{x:Bind Player.CurrentTitle, Mode=OneWay}"
+                                                   Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                                   TextAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock x:Name="LcdArtistText"
+                                                   Text="{x:Bind Player.CurrentArtist, Mode=OneWay}"
+                                                   Style="{ThemeResource CaptionTextBlockStyle}"
+                                                   Opacity="0.75"
+                                                   TextAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                            <Button x:Name="LcdMoreButton"
+                                    Grid.Column="1"
+                                    Width="40" Padding="0"
+                                    Background="Transparent" BorderThickness="0"
+                                    VerticalAlignment="Stretch"
+                                    ToolTipService.ToolTip="More actions"
+                                    AutomationProperties.AutomationId="LcdMore"
+                                    AutomationProperties.Name="More actions">
+                                <SymbolIcon Symbol="More" />
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem x:Uid="GoToNowPlaying"
+                                                        Click="NowPlayingOpen_Click" />
+                                        <MenuFlyoutItem x:Uid="OpenQueue"
+                                                        Click="OpenQueueMenuItem_Click" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </Grid>
+                        <!-- Progress at rest is neutral (spec §0):
+                             primary text fill over a faint track, never
+                             green. -->
+                        <ProgressBar Grid.Row="1"
+                                     Height="2"
+                                     Minimum="0"
+                                     Maximum="{x:Bind Player.DurationSeconds, Mode=OneWay}"
+                                     Value="{x:Bind Player.PositionSeconds, Mode=OneWay}"
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                     Background="{ThemeResource TextFillColorDisabledBrush}" />
+                    </Grid>
+                </Border>
+
+                <!-- Right cluster: volume, lyrics, queue. -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4"
+                            Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Button x:Name="VolumeButton"
+                            Width="40" Height="40" Padding="0"
+                            Background="Transparent" BorderThickness="0"
+                            ToolTipService.ToolTip="Volume"
+                            AutomationProperties.AutomationId="VolumeButton"
+                            AutomationProperties.Name="Volume"
+                            Click="VolumeButton_Click">
+                        <SymbolIcon x:Name="VolumeIcon" Symbol="Volume" />
+                    </Button>
+                    <!-- Collapsed below ~1100 DIP window width in
+                         code-behind (AUDIT_2 R-2): the mute toggle
+                         remains, every command stays reachable. -->
+                    <Slider x:Name="VolumeSlider"
+                            Width="100"
+                            Minimum="0" Maximum="100" StepFrequency="1"
+                            VerticalAlignment="Center"
+                            Value="{x:Bind Player.Volume, Mode=TwoWay}"
+                            AutomationProperties.AutomationId="VolumeSlider"
+                            AutomationProperties.Name="Volume" />
+                    <Button Width="40" Height="40" Padding="0"
+                            Background="Transparent" BorderThickness="0"
+                            ToolTipService.ToolTip="Lyrics"
+                            AutomationProperties.AutomationId="LyricsButton"
+                            AutomationProperties.Name="Lyrics"
+                            Click="LyricsButton_Click">
+                        <SymbolIcon Symbol="Message" />
+                    </Button>
+                    <Button Width="40" Height="40" Padding="0"
+                            Background="Transparent" BorderThickness="0"
+                            ToolTipService.ToolTip="Queue"
+                            AutomationProperties.AutomationId="QueueButton"
+                            AutomationProperties.Name="Queue"
+                            Click="QueueButton_Click">
+                        <SymbolIcon Symbol="Bullets" />
+                    </Button>
+                </StackPanel>
+
+                <!-- Caption-button clearance: width set from
+                     AppWindow.TitleBar.RightInset in code-behind. -->
+                <Border x:Name="CaptionInsetSpacer" Grid.Column="4" />
+            </Grid>
         </Grid>
 
-        <!-- ============ Row 1: NavigationView + content ============ -->
+        <!-- ============ Row 1: shell failure bar (AUDIT_3 M2) ============
+             Playback/navigation failures used to render only inside
+             the Now Playing page; everywhere else a failed track was
+             a silent stop. This slim bar surfaces the same state at
+             shell level, on every page, until dismissed. -->
+        <Border x:Name="FailureBar" Grid.Row="1"
+                Visibility="Collapsed"
+                Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}"
+                Padding="12,4,4,4">
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="FailureBarText"
+                           Grid.Column="0"
+                           VerticalAlignment="Center"
+                           Style="{ThemeResource BodyTextBlockStyle}"
+                           TextTrimming="CharacterEllipsis" />
+                <Button Grid.Column="1"
+                        Width="32" Height="32" Padding="0"
+                        Background="Transparent" BorderThickness="0"
+                        VerticalAlignment="Center"
+                        ToolTipService.ToolTip="Dismiss"
+                        AutomationProperties.AutomationId="ShellFailureDismiss"
+                        AutomationProperties.Name="Dismiss"
+                        Click="FailureDismiss_Click">
+                    <SymbolIcon Symbol="Cancel" FontSize="12" />
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- ============ Row 2: NavigationView + content ============ -->
         <NavigationView x:Name="ShellNav"
-                        Grid.Row="1"
-                        PaneDisplayMode="Left"
+                        Grid.Row="2"
+                        PaneDisplayMode="Auto"
                         OpenPaneLength="260"
                         IsPaneToggleButtonVisible="False"
                         IsSettingsVisible="False"
                         IsBackButtonVisible="Collapsed"
-                        SelectionChanged="ShellNav_SelectionChanged">
+                        ItemInvoked="ShellNav_ItemInvoked">
             <NavigationView.PaneCustomContent>
                 <!-- THE search box of the app (spec §1/§5): SearchPage's
                      own box is removed by WS2, so the SearchBox id lives
@@ -300,19 +408,19 @@
                         <SymbolIcon Symbol="Clock" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="NavArtists" Tag="library:artists"
+                <NavigationViewItem x:Name="NavArtistsItem" x:Uid="NavArtists" Tag="library:artists"
                                     AutomationProperties.AutomationId="NavLibArtists">
                     <NavigationViewItem.Icon>
                         <SymbolIcon Symbol="People" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="NavAlbums" Tag="library:albums"
+                <NavigationViewItem x:Name="NavAlbumsItem" x:Uid="NavAlbums" Tag="library:albums"
                                     AutomationProperties.AutomationId="NavLibAlbums">
                     <NavigationViewItem.Icon>
                         <SymbolIcon Symbol="BrowsePhotos" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="NavSongs" Tag="library:songs"
+                <NavigationViewItem x:Name="NavSongsItem" x:Uid="NavSongs" Tag="library:songs"
                                     AutomationProperties.AutomationId="NavLibSongs">
                     <NavigationViewItem.Icon>
                         <SymbolIcon Symbol="Audio" />
@@ -329,8 +437,17 @@
                 </NavigationViewItem>
             </NavigationView.MenuItems>
             <NavigationView.PaneFooter>
+                <!-- Footer items are hosted by the pane's footer
+                     presenter, OUTSIDE the menu list's invocation
+                     pipeline: real-pointer QA proved this item never
+                     selected and never raised SelectionChanged while
+                     every menu item worked. The Tapped route feeds the
+                     same navigation path explicitly (harmless if the
+                     pipeline also delivers ItemInvoked — the section
+                     navigation is idempotent). -->
                 <NavigationViewItem x:Name="NavSettingsItem" x:Uid="NavSettings" Tag="settings"
-                                    AutomationProperties.AutomationId="NavSettings">
+                                    AutomationProperties.AutomationId="NavSettings"
+                                    Tapped="NavSettingsItem_Tapped">
                     <NavigationViewItem.Icon>
                         <SymbolIcon Symbol="Setting" />
                     </NavigationViewItem.Icon>
