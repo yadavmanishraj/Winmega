@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Input;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -70,6 +71,15 @@ public sealed partial class NowPlayingPanel : UserControl
         _client = services.GetRequiredService<JioSaavnClient>();
         _store = services.GetRequiredService<ILibraryStore>();
         InitializeComponent();
+
+        // Resize cursor over the grip strip. Border is sealed and
+        // ProtectedCursor is only settable on the derived control
+        // itself, so the cursor lives on the panel: WinUI resolves
+        // the pointer cursor up the tree from the hit element, and
+        // the grip sets none of its own.
+        GripBorder.PointerEntered += (_, _) =>
+            ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
+        GripBorder.PointerExited += (_, _) => ProtectedCursor = null;
 
         PanelTitleText.Text = Res.Get("NowPlayingTitle");
         SegmentQueueButton.Content = Res.Get("Queue");

@@ -38,7 +38,7 @@
         <!-- Resize grip: hit-testable strip on the panel's left
              edge (transparent fill — a null background would not be
              hit-testable). The 1px stroke line is centred in it. -->
-        <controls:ResizeGripBorder x:Name="GripBorder" Grid.Column="0"
+        <Border x:Name="GripBorder" Grid.Column="0"
                 Background="Transparent"
                 PointerPressed="Grip_PointerPressed"
                 PointerMoved="Grip_PointerMoved"
@@ -50,7 +50,7 @@
                 AutomationProperties.Name="Resize panel">
             <Border Width="1" HorizontalAlignment="Center"
                     Background="{ThemeResource CardStrokeColorDefaultBrush}" />
-        </controls:ResizeGripBorder>
+        </Border>
 
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
