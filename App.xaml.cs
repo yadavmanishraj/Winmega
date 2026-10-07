@@ -49,6 +49,10 @@ public partial class App : Application
         // Download engine (FX3): streams songs to LocalFolder\Downloads
         // and mirrors progress into the store's download records.
         services.AddSingleton<DownloadService>();
+        // Artwork palettes for the Now Playing FX layer (NOW_PLAYING_FX
+        // §1): decode + quantize once per track, cached; consumed by
+        // the Now Playing panel, never on its open path.
+        services.AddSingleton<ArtworkPaletteService>();
         // Page ViewModels (real-data pages).
         services.AddTransient<HomeViewModel>();
         services.AddTransient<SearchViewModel>();
