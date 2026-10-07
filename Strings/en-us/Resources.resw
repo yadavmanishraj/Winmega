@@ -282,6 +282,9 @@
   <data name="ThemeLabel.Text" xml:space="preserve">
     <value>Theme</value>
   </data>
+  <data name="NowPlayingFxLabel.Text" xml:space="preserve">
+    <value>Now Playing effects</value>
+  </data>
   <data name="PlaybackHeader.Text" xml:space="preserve">
     <value>Playback</value>
   </data>
@@ -447,6 +450,18 @@
   </data>
   <data name="ThemeLight" xml:space="preserve">
     <value>Light</value>
+  </data>
+  <data name="FxAurora" xml:space="preserve">
+    <value>Aurora</value>
+  </data>
+  <data name="FxParticles" xml:space="preserve">
+    <value>Particles</value>
+  </data>
+  <data name="FxPulse" xml:space="preserve">
+    <value>Pulse</value>
+  </data>
+  <data name="FxOff" xml:space="preserve">
+    <value>Off</value>
   </data>
 
   <!-- Apple-layout shell (APPLE_LAYOUT_SPEC §1): NavigationView items
