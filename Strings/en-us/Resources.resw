@@ -66,18 +66,6 @@
   <data name="AppWordmark.Text" xml:space="preserve">
     <value>Omega</value>
   </data>
-  <data name="NavHome.Text" xml:space="preserve">
-    <value>Home</value>
-  </data>
-  <data name="NavSearch.Text" xml:space="preserve">
-    <value>Search</value>
-  </data>
-  <data name="NavLibrary.Text" xml:space="preserve">
-    <value>Library</value>
-  </data>
-  <data name="NavSettings.Text" xml:space="preserve">
-    <value>Settings</value>
-  </data>
   <data name="EndpointStatus.Text" xml:space="preserve">
     <value>Direct · JioSaavn</value>
   </data>
