@@ -129,7 +129,7 @@
                         ToolTipService.ToolTip="Play or pause"
                         AutomationProperties.AutomationId="NowPlayingPlayPause"
                         AutomationProperties.Name="Play or pause">
-                    <SymbolIcon Symbol="{x:Bind ViewModel.PlayPauseSymbol, Mode=OneWay}" FontSize="24" />
+                    <SymbolIcon Symbol="{x:Bind ViewModel.PlayPauseSymbol, Mode=OneWay}" Width="24" Height="24" />
                 </Button>
                 <Button Width="48" Height="48" Padding="0"
                         CornerRadius="24"
@@ -226,7 +226,7 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <SymbolIcon Symbol="MusicNote" VerticalAlignment="Center" />
+                                <SymbolIcon Symbol="MusicInfo" VerticalAlignment="Center" />
                                 <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
                                     <TextBlock Text="{x:Bind Name}"
                                                Style="{ThemeResource BodyTextBlockStyle}"
