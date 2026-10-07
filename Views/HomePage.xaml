@@ -20,7 +20,7 @@
          BAND HEIGHT IS LOAD-BEARING: each section's ScrollViewer
          Height is pinned by code-behind to its row count of cells
          plus the inter-row allowance — entity sections (New
-         albums, Charts, Top playlists, Discover) are 2 ROWS
+         albums, Charts, Top playlists) are 2 ROWS
          (band = 2 x cell + 16), song sections (Jump back in,
          Trending) are 3 ROWS (band = 296 at every tier) — and the
          ItemsRepeater's UniformGridLayout (Orientation=Vertical,
@@ -464,46 +464,11 @@
                 </ScrollViewer>
             </StackPanel>
 
-            <!-- Browse discover (channels — shape rules still apply) -->
-            <StackPanel x:Name="DiscoverSection" Spacing="12"
-                        Visibility="{x:Bind ViewModel.HasDiscover, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <Grid>
-                    <TextBlock x:Uid="SectionDiscover" Style="{StaticResource SectionHeaderStyle}"
-                               VerticalAlignment="Center" />
-                    <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
-                        <Button x:Name="DiscoverScrollPrev" Style="{StaticResource IconButtonStyle}"
-                                Width="36" Height="36" CornerRadius="18"
-                                AutomationProperties.AutomationId="HomeDiscoverScrollPrev"
-                                AutomationProperties.Name="Scroll back">
-                            <FontIcon Glyph="&#xE76B;" FontSize="14" />
-                        </Button>
-                        <Button x:Name="DiscoverScrollNext" Style="{StaticResource IconButtonStyle}"
-                                Width="36" Height="36" CornerRadius="18"
-                                AutomationProperties.AutomationId="HomeDiscoverScrollNext"
-                                AutomationProperties.Name="Scroll forward">
-                            <FontIcon Glyph="&#xE76C;" FontSize="14" />
-                        </Button>
-                    </StackPanel>
-                </Grid>
-                <ScrollViewer x:Name="DiscoverScroller" Height="512"
-                              HorizontalScrollMode="Enabled"
-                              HorizontalScrollBarVisibility="Hidden"
-                              VerticalScrollMode="Disabled"
-                              VerticalScrollBarVisibility="Disabled"
-                              ZoomMode="Disabled"
-                              AutomationProperties.AutomationId="HomeDiscoverGrid">
-                    <ItemsRepeater x:Name="DiscoverRepeater"
-                                   ItemsSource="{x:Bind ViewModel.DiscoverItems, Mode=OneWay}"
-                                   ItemTemplate="{StaticResource EntityCardTemplate}"
-                                   ElementPrepared="EntityRepeater_ElementPrepared"
-                                   ElementClearing="EntityRepeater_ElementClearing">
-                        <ItemsRepeater.Layout>
-                            <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="2"
-                                               MinItemWidth="196" MinItemHeight="248" />
-                        </ItemsRepeater.Layout>
-                    </ItemsRepeater>
-                </ScrollViewer>
-            </StackPanel>
+            <!-- No Browse Discover section (DETAIL_PAGE_DESIGN §2):
+                 every live item in that module is an upstream
+                 "channel" (DisplayOnly) — no detail page, no play
+                 surface — so the section was a band of inert cards
+                 and was removed outright rather than dressed up. -->
         </StackPanel>
     </ScrollViewer>
 </Page>
