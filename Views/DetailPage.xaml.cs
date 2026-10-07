@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
@@ -88,6 +89,89 @@ public sealed partial class DetailPage : Page
             !string.IsNullOrWhiteSpace(artistId))
         {
             Frame.Navigate(typeof(DetailPage), DetailNavigationArgs.Artist(artistId));
+        }
+    }
+
+    private bool _aboutDialogOpen;
+
+    /// <summary>
+    /// The full artist bio in a dialog: every section (heading +
+    /// complete, selectable body) plus the About facts line, scrolling
+    /// inside the dialog — the page itself shows only the 4-line
+    /// preview of the first section.
+    /// </summary>
+    private async void AboutMore_Click(object sender, RoutedEventArgs e)
+    {
+        if (_aboutDialogOpen)
+        {
+            return;
+        }
+
+        _aboutDialogOpen = true;
+        try
+        {
+            var sections = new StackPanel { Spacing = 16 };
+            foreach (DetailBioSection section in ViewModel.BioSections)
+            {
+                var block = new StackPanel { Spacing = 4 };
+                string? title = section.Title;
+                if (!string.IsNullOrWhiteSpace(title))
+                {
+                    block.Children.Add(new TextBlock
+                    {
+                        Text = title,
+                        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                        TextWrapping = TextWrapping.Wrap,
+                        IsTextSelectionEnabled = true,
+                    });
+                }
+
+                block.Children.Add(new TextBlock
+                {
+                    Text = section.Text,
+                    TextWrapping = TextWrapping.Wrap,
+                    IsTextSelectionEnabled = true,
+                });
+                sections.Children.Add(block);
+            }
+
+            if (ViewModel.AboutFacts.Count > 0)
+            {
+                sections.Children.Add(new TextBlock
+                {
+                    Text = string.Join("  ·  ", ViewModel.AboutFacts),
+                    TextWrapping = TextWrapping.Wrap,
+                    IsTextSelectionEnabled = true,
+                    Opacity = 0.75,
+                });
+            }
+
+            AutomationProperties.SetAutomationId(sections, "DetailAboutFullText");
+
+            var scroll = new ScrollViewer
+            {
+                Content = sections,
+                MaxHeight = 480,
+                VerticalScrollMode = ScrollMode.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollMode = ScrollMode.Disabled,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            };
+
+            var dialog = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = Res.Format("AboutDialogTitleFormat", ViewModel.Title),
+                Content = scroll,
+                CloseButtonText = Res.Get("CloseText"),
+                DefaultButton = ContentDialogButton.Close,
+            };
+            AutomationProperties.SetAutomationId(dialog, "DetailAboutDialog");
+            await dialog.ShowAsync();
+        }
+        finally
+        {
+            _aboutDialogOpen = false;
         }
     }
 

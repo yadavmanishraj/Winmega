@@ -618,6 +618,12 @@
   <data name="MoreText" xml:space="preserve">
     <value>More</value>
   </data>
+  <data name="CloseText" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="AboutDialogTitleFormat" xml:space="preserve">
+    <value>About {0}</value>
+  </data>
   <data name="LessText" xml:space="preserve">
     <value>Less</value>
   </data>

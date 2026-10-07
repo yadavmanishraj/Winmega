@@ -81,16 +81,6 @@
                              Click="ArtistLink_Click" Padding="2,0" MinHeight="32" />
         </DataTemplate>
 
-        <!-- About: one titled bio paragraph. -->
-        <DataTemplate x:Key="BioSectionTemplate" x:DataType="vm:DetailBioSection">
-            <StackPanel Spacing="4" MaxWidth="760" HorizontalAlignment="Left">
-                <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
-                           TextWrapping="Wrap" />
-                <TextBlock Text="{x:Bind Text}" Style="{ThemeResource BodyTextBlockStyle}"
-                           TextWrapping="Wrap" />
-            </StackPanel>
-        </DataTemplate>
-
         <!-- About fact chip (followers / born / language). -->
         <DataTemplate x:Key="FactChipTemplate" x:DataType="x:String">
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -426,12 +416,25 @@
                 <StackPanel Spacing="12" Margin="0,40,0,0"
                             Visibility="{x:Bind ViewModel.HasAbout, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                     <TextBlock x:Uid="AboutHeader" Style="{StaticResource SectionHeaderStyle}" />
-                    <ItemsRepeater ItemsSource="{x:Bind ViewModel.BioSections, Mode=OneWay}"
-                                   ItemTemplate="{StaticResource BioSectionTemplate}">
-                        <ItemsRepeater.Layout>
-                            <StackLayout Spacing="16" />
-                        </ItemsRepeater.Layout>
-                    </ItemsRepeater>
+                    <!-- Bio preview: first section only, clamped to 4
+                         lines; the More button opens the full bio in a
+                         dialog when the preview hides anything. -->
+                    <StackPanel Spacing="4" MaxWidth="760" HorizontalAlignment="Left"
+                                Visibility="{x:Bind ViewModel.HasAboutPreview, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="{x:Bind ViewModel.AboutPreviewTitle, Mode=OneWay}"
+                                   Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                   TextWrapping="Wrap"
+                                   Visibility="{x:Bind ViewModel.HasAboutPreviewTitle, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        <TextBlock Text="{x:Bind ViewModel.AboutPreviewText, Mode=OneWay}"
+                                   Style="{ThemeResource BodyTextBlockStyle}"
+                                   TextWrapping="Wrap" MaxLines="4"
+                                   TextTrimming="CharacterEllipsis" />
+                        <HyperlinkButton Content="{x:Bind ViewModel.AboutMoreText, Mode=OneWay}"
+                                         Click="AboutMore_Click"
+                                         Padding="0,2" MinHeight="32" HorizontalAlignment="Left"
+                                         Visibility="{x:Bind ViewModel.ShowAboutMore, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                         AutomationProperties.AutomationId="DetailAboutMore" />
+                    </StackPanel>
                     <ItemsRepeater ItemsSource="{x:Bind ViewModel.AboutFacts, Mode=OneWay}"
                                    ItemTemplate="{StaticResource FactChipTemplate}">
                         <ItemsRepeater.Layout>

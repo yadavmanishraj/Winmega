@@ -72,6 +72,13 @@ public partial class DetailViewModel : ObservableObject
     /// </summary>
     private const int DescriptionToggleThreshold = 220;
 
+    /// <summary>
+    /// First-section bio length beyond which the text cannot fit the
+    /// About preview's 4 lines: the bio column is 760 DIP wide at body
+    /// size (~105 chars/line), so 4 lines hold roughly 420 chars.
+    /// </summary>
+    private const int AboutMoreThreshold = 400;
+
     private readonly JioSaavnClient _client;
     private readonly IPlaybackGateway _playback;
     private readonly PlayerService _player;
@@ -237,6 +244,28 @@ public partial class DetailViewModel : ObservableObject
     public bool HasLatestRelease => LatestRelease is not null;
 
     public bool HasBioSections => BioSections.Count > 0;
+
+    /// <summary>The first bio section — the only one the About preview renders.</summary>
+    public DetailBioSection? AboutPreview => BioSections.Count > 0 ? BioSections[0] : null;
+
+    public bool HasAboutPreview => AboutPreview is not null;
+
+    public bool HasAboutPreviewTitle => !string.IsNullOrWhiteSpace(AboutPreview?.Title);
+
+    public string AboutPreviewTitle => AboutPreview?.Title ?? string.Empty;
+
+    public string AboutPreviewText => AboutPreview?.Text ?? string.Empty;
+
+    /// <summary>
+    /// True when the 4-line preview hides content: further bio sections
+    /// exist, or the first section alone overflows ~4 lines (see
+    /// AboutMoreThreshold). A one/two-line stub bio never qualifies.
+    /// </summary>
+    public bool ShowAboutMore =>
+        BioSections.Count > 1 ||
+        (BioSections.Count == 1 && BioSections[0].Text.Length > AboutMoreThreshold);
+
+    public string AboutMoreText => Res.Get("MoreText");
 
     public bool HasWiki => WikiUrl is not null;
 
@@ -881,6 +910,11 @@ public partial class DetailViewModel : ObservableObject
         }
 
         OnPropertyChanged(nameof(HasAbout));
+        OnPropertyChanged(nameof(HasAboutPreview));
+        OnPropertyChanged(nameof(HasAboutPreviewTitle));
+        OnPropertyChanged(nameof(AboutPreviewTitle));
+        OnPropertyChanged(nameof(AboutPreviewText));
+        OnPropertyChanged(nameof(ShowAboutMore));
         OnPropertyChanged(nameof(HasWiki));
     }
 
@@ -1030,6 +1064,11 @@ public partial class DetailViewModel : ObservableObject
         OnPropertyChanged(nameof(HasDescription));
         OnPropertyChanged(nameof(ShowDescriptionToggle));
         OnPropertyChanged(nameof(HasAbout));
+        OnPropertyChanged(nameof(HasAboutPreview));
+        OnPropertyChanged(nameof(HasAboutPreviewTitle));
+        OnPropertyChanged(nameof(AboutPreviewTitle));
+        OnPropertyChanged(nameof(AboutPreviewText));
+        OnPropertyChanged(nameof(ShowAboutMore));
         OnPropertyChanged(nameof(HasProvenance));
         OnPropertyChanged(nameof(CanDownloadAll));
         OnPropertyChanged(nameof(CanCopyLink));
