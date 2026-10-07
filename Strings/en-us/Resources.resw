@@ -528,6 +528,51 @@
   <data name="NavigationFailedMessage" xml:space="preserve">
     <value>That page couldn't be opened.</value>
   </data>
+  <!-- Strip dropdowns: the queue + lyrics flyouts on the shell's
+       right cluster. The lyrics status strings intentionally match
+       the Now Playing page's panel wording verbatim, so both
+       surfaces say the same thing (the page still carries its own
+       literals). The queue header reuses the plain "Queue" key and
+       the count reuses "SongsCountFormat" above. -->
+  <data name="QueueNowPlayingLabel" xml:space="preserve">
+    <value>NOW PLAYING</value>
+  </data>
+  <data name="QueueUpNextLabel" xml:space="preserve">
+    <value>UP NEXT</value>
+  </data>
+  <data name="QueueClear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="QueueEmptyTitle" xml:space="preserve">
+    <value>Nothing up next.</value>
+  </data>
+  <data name="QueueEmptyBody" xml:space="preserve">
+    <value>Songs you play or queue will line up here.</value>
+  </data>
+  <data name="OpenNowPlaying" xml:space="preserve">
+    <value>Open Now Playing</value>
+  </data>
+  <data name="LyricsOpenNowPlaying" xml:space="preserve">
+    <value>Open in Now Playing</value>
+  </data>
+  <data name="LyricsMetaFormat" xml:space="preserve">
+    <value>{0} — {1}</value>
+  </data>
+  <data name="LyricsNothingPlaying" xml:space="preserve">
+    <value>Nothing playing — lyrics appear here when a track with lyrics is playing.</value>
+  </data>
+  <data name="LyricsUnavailable" xml:space="preserve">
+    <value>Lyrics aren't available for this track.</value>
+  </data>
+  <data name="LyricsLoading" xml:space="preserve">
+    <value>Loading lyrics…</value>
+  </data>
+  <data name="LyricsLoadFailed" xml:space="preserve">
+    <value>Lyrics couldn't be loaded. Check your connection and try again.</value>
+  </data>
+  <data name="LyricsRetry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
   <!-- Detail page (DETAIL_PAGE_DESIGN): eyebrows, header meta
        formats, description toggle, entity actions, section headers
        and the zero-song empty state. -->
