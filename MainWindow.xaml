@@ -106,7 +106,7 @@
                      VM), not the shell mirror. Shuffle/repeat on-state
                      = filled disc + green glyph + dot (code-behind),
                      plus the state in the accessible name. -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                <StackPanel x:Name="TransportCluster" Grid.Column="1" Orientation="Horizontal" Spacing="4"
                             Margin="8,0,0,0" VerticalAlignment="Center">
                     <ToggleButton x:Name="ShuffleButton"
                                   Style="{StaticResource StripTransportToggleStyle}"
@@ -176,7 +176,7 @@
                      a quiet readout, not a banner; idle shows a
                      placeholder artwork tile (code-behind toggles it
                      against CurrentArtworkSource). -->
-                <Border Grid.Column="2"
+                <Border x:Name="LcdWell" Grid.Column="2"
                         MaxWidth="460" Height="48"
                         Margin="24,0"
                         HorizontalAlignment="Stretch" VerticalAlignment="Center"
@@ -269,7 +269,7 @@
                 </Border>
 
                 <!-- Right cluster: volume, lyrics, queue. -->
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4"
+                <StackPanel x:Name="RightCluster" Grid.Column="3" Orientation="Horizontal" Spacing="4"
                             Margin="0,0,8,0" VerticalAlignment="Center">
                     <Button x:Name="VolumeButton"
                             Width="40" Height="40" Padding="0"
@@ -423,7 +423,11 @@
                      every menu item worked. The Tapped route feeds the
                      same navigation path explicitly (harmless if the
                      pipeline also delivers ItemInvoked — the section
-                     navigation is idempotent). -->
+                     navigation is idempotent). It must never assign
+                     this item to NavigationView.SelectedItem: the
+                     selection model only resolves MenuItems, and
+                     selecting a footer item throws (0xC000027B,
+                     live-traced 2026-10-07). -->
                 <NavigationViewItem x:Name="NavSettingsItem" x:Uid="NavSettings" Tag="settings"
                                     AutomationProperties.AutomationId="NavSettings"
                                     Tapped="NavSettingsItem_Tapped">

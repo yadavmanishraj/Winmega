@@ -4,6 +4,8 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Input;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -15,6 +17,7 @@ using Omega.Core.Persistence;
 using Omega.Services;
 using Omega.ViewModels;
 using Omega.Views;
+using Windows.Foundation;
 using Windows.Graphics;
 
 namespace Omega;
@@ -44,6 +47,8 @@ public sealed partial class MainWindow : Window
     private object? _currentNavParameter;
     private string? _navError;
     private double _volumeBeforeMute = 100;
+    private InputNonClientPointerSource? _nonClientSource;
+    private RectInt32[] _passthroughRects = Array.Empty<RectInt32>();
 
     public MainWindow()
     {
@@ -55,9 +60,11 @@ public sealed partial class MainWindow : Window
 
         // Custom title bar (spec §1): ONLY the background border is
         // the drag region — the strip's interactive content is a
-        // sibling ABOVE it, never a descendant, so manipulations that
-        // start on a control (the volume Slider above all) belong to
-        // the control, not to a window drag (POINTER QA F3).
+        // sibling ABOVE it, never a descendant. The sibling shape
+        // alone did NOT stop caption drags from starting on controls
+        // (round-2 D3: a volume-Slider drag still moved the window);
+        // the non-client Passthrough regions registered below are
+        // what actually yield manipulation to the controls.
         // ExtendsContentIntoTitleBar is set in code (it errors in
         // XAML); the system caption buttons stay, transparent over
         // Mica, and the strip reserves their width via RightInset
@@ -66,6 +73,21 @@ public sealed partial class MainWindow : Window
         SetTitleBar(TitleBarDragRegion);
         AppWindow.TitleBar.ButtonBackgroundColor = Microsoft.UI.Colors.Transparent;
         AppWindow.TitleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
+
+        // Non-client passthrough (POINTER QA F3 / round-2 D3): the
+        // drag Border is a SIBLING of the strip content, so the
+        // framework subtracts NO interactive rects from the caption
+        // region — clicks still reach the controls, but a drag that
+        // starts on one (the volume Slider above all) is claimed by
+        // the caption as a window move before the control can
+        // capture it. Registering the interactive clusters as
+        // Passthrough regions makes the non-client source yield
+        // those rects to client input, so the Slider manipulates
+        // and only genuinely empty strip area drags the window.
+        // Rects are window-relative device pixels, refreshed on
+        // layout (see UpdatePassthroughRegions).
+        _nonClientSource = InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
+        TitleBarStrip.LayoutUpdated += TitleBarStrip_LayoutUpdated;
 
         // Default size 1400x900 DIP is applied in TitleBarStrip_Loaded:
         // AppWindow.Resize takes PHYSICAL pixels, so the DIP size must
@@ -111,13 +133,28 @@ public sealed partial class MainWindow : Window
 
         // One-time default size: 1400x900 DIP (the Apple silhouette —
         // 260 pane + LCD strip — wants the width), converted to the
-        // physical pixels AppWindow.Resize expects.
+        // physical pixels AppWindow expects, then CLAMPED into the
+        // display work area together with the position. The clamp
+        // matters: Windows restores the previous placement, and QA
+        // drag history (plus a work area narrowed by a side-docked
+        // taskbar) left the window ~290px taller than the visible
+        // area with its bottom — including the pane footer's
+        // Settings row — BELOW the screen, where no real click can
+        // ever land (POINTER QA round 2, live-traced).
         if (!_initialSizeApplied)
         {
             _initialSizeApplied = true;
-            AppWindow.Resize(new SizeInt32(
-                (int)Math.Round(1400 * scale),
-                (int)Math.Round(900 * scale)));
+            RectInt32 workArea = DisplayArea
+                .GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest)
+                .WorkArea;
+            int width = Math.Min((int)Math.Round(1400 * scale), workArea.Width);
+            int height = Math.Min((int)Math.Round(900 * scale), workArea.Height);
+            PointInt32 position = AppWindow.Position;
+            int maxX = Math.Max(workArea.X, workArea.X + workArea.Width - width);
+            int maxY = Math.Max(workArea.Y, workArea.Y + workArea.Height - height);
+            int x = Math.Clamp(position.X, workArea.X, maxX);
+            int y = Math.Clamp(position.Y, workArea.Y, maxY);
+            AppWindow.MoveAndResize(new RectInt32(x, y, width, height));
         }
 
         CaptionInsetSpacer.Width = AppWindow.TitleBar.RightInset / scale;
@@ -125,6 +162,72 @@ public sealed partial class MainWindow : Window
         // ActualTheme is only settled once the tree is live.
         UpdateTransportState();
         UpdateEndpointStatus();
+        UpdatePassthroughRegions();
+    }
+
+    private void TitleBarStrip_LayoutUpdated(object? sender, object e) =>
+        UpdatePassthroughRegions();
+
+    /// <summary>
+    /// Marks the strip's interactive clusters (back button,
+    /// transport cluster, LCD well, right cluster incl. the volume
+    /// Slider) as non-client Passthrough rects, so pointer
+    /// manipulation that starts on a control belongs to the control
+    /// instead of becoming a caption drag. Recomputed on every
+    /// layout pass but only pushed to the source when a rect
+    /// actually changed (window resizes shift the centred well;
+    /// the volume fold-down removes the Slider's band).
+    /// </summary>
+    private void UpdatePassthroughRegions()
+    {
+        if (_nonClientSource is null)
+        {
+            return;
+        }
+
+        var rects = new List<RectInt32>(4);
+        AddPassthroughRect(rects, BackButton);
+        AddPassthroughRect(rects, TransportCluster);
+        AddPassthroughRect(rects, LcdWell);
+        AddPassthroughRect(rects, RightCluster);
+        if (rects.Count == 0)
+        {
+            return;
+        }
+
+        bool changed = rects.Count != _passthroughRects.Length;
+        for (int i = 0; !changed && i < rects.Count; i++)
+        {
+            changed = !rects[i].Equals(_passthroughRects[i]);
+        }
+
+        if (!changed)
+        {
+            return;
+        }
+
+        _passthroughRects = rects.ToArray();
+        _nonClientSource.SetRegionRects(NonClientRegionKind.Passthrough, _passthroughRects);
+    }
+
+    private static void AddPassthroughRect(List<RectInt32> rects, FrameworkElement element)
+    {
+        if (element.ActualWidth <= 0 || element.ActualHeight <= 0)
+        {
+            return;
+        }
+
+        // TransformToVisual(null) yields client-area DIPs with the
+        // window's root as origin; the non-client source wants
+        // device pixels in the same window-relative frame, so scale
+        // by the rasterization scale.
+        Point origin = element.TransformToVisual(null).TransformPoint(new Point(0, 0));
+        double scale = element.XamlRoot?.RasterizationScale ?? 1.0;
+        rects.Add(new RectInt32(
+            (int)Math.Round(origin.X * scale),
+            (int)Math.Round(origin.Y * scale),
+            (int)Math.Round(element.ActualWidth * scale),
+            (int)Math.Round(element.ActualHeight * scale)));
     }
 
     /// <summary>
@@ -169,20 +272,19 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The Settings row lives in the pane FOOTER, which the
-    /// NavigationView template hosts in a plain content presenter,
-    /// outside the menu list's invocation pipeline: real-pointer QA
-    /// (POINTER QA F2) proved its clicks never selected it and never
-    /// raised SelectionChanged/ItemInvoked, while every menu item —
-    /// served by the identical handler — worked. This explicit route
-    /// feeds the same navigation path; it is idempotent alongside
-    /// ItemInvoked (a section switch to the current section is a
-    /// no-op), so the row works whichever route a given framework
-    /// build delivers.
+    /// The Settings row lives in the pane FOOTER, hosted outside the
+    /// menu list. Live debugging (2026-10-07, traced build) proved
+    /// its clicks DO fire Tapped and ItemInvoked once the window is
+    /// on-screen — the actual crash was downstream: assigning the
+    /// footer item to <c>ShellNav.SelectedItem</c> throws a stowed
+    /// exception (0xC000027B), because the selection state machine
+    /// only tracks MenuItems (and the built-in settings item), never
+    /// PaneFooter content. So this route only NAVIGATES; selection
+    /// for the Settings page is synced to "no row" in
+    /// ContentFrame_Navigated, never to the footer item itself.
     /// </summary>
     private void NavSettingsItem_Tapped(object sender, TappedRoutedEventArgs e)
     {
-        SetSelectedItem(NavSettingsItem);
         NavigateByTag("settings");
     }
 
@@ -277,7 +379,13 @@ public sealed partial class MainWindow : Window
         }
         else if (e.SourcePageType == typeof(SettingsPage))
         {
-            SetSelectedItem(NavSettingsItem);
+            // NEVER select the footer item itself: assigning a
+            // PaneFooter NavigationViewItem to NavigationView.
+            // SelectedItem throws (0xC000027B) — the selection model
+            // only resolves MenuItems. Settings is a footer
+            // destination, so no menu row stays selected while it is
+            // shown (the same treatment Search gets below).
+            SetSelectedItem(null);
         }
         else if (e.SourcePageType == typeof(SearchPage))
         {
