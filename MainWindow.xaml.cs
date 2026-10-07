@@ -495,6 +495,21 @@ public sealed partial class MainWindow : Window
             SyncLibrarySelection(e.Parameter);
         }
 
+        if (e.Content is SearchPage searchPage)
+        {
+            // Search focus is requested again only AFTER the
+            // selection sync above. SearchPage.OnNavigatedTo makes
+            // its request before this handler runs; on the Ctrl+F
+            // path, where NavSearchItem was not already selected,
+            // assigning SelectedItem lets the NavigationView move
+            // focus to the newly selected row and win that race.
+            // The page queues this final request at Low priority,
+            // so it lands after navigation has settled. The nav-
+            // click path sees the same final request and behaves
+            // exactly as before.
+            searchPage.FocusSearchBox();
+        }
+
         // Detail pages are pushes over the shell: the sidebar
         // selection stays on the last top-level row (Apple's model).
     }

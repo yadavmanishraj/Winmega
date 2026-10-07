@@ -448,24 +448,27 @@
                  header above stays — it carries the close button).
                  Shown/hidden from RefreshFromViewModel, the panel's
                  single sync point. ===== -->
-            <StackPanel x:Name="IdlePlaceholder" Grid.Row="1"
-                        Style="{StaticResource EmptyStatePanelStyle}"
-                        VerticalAlignment="Center"
-                        Visibility="Collapsed"
-                        AutomationProperties.AutomationId="NowPlayingIdlePlaceholder">
-                <Border Width="76" Height="76" CornerRadius="38"
-                        HorizontalAlignment="Center"
-                        Background="{ThemeResource HeroTintBrush}">
-                    <SymbolIcon Symbol="MusicInfo" Width="34" Height="34"
-                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                AutomationProperties.AccessibilityView="Raw" />
-                </Border>
-                <TextBlock x:Name="IdleTitleText"
-                           Style="{StaticResource EmptyStateHeadlineStyle}" />
-                <TextBlock x:Name="IdleBodyText"
-                           Style="{StaticResource EmptyStateGuidanceStyle}" />
-            </StackPanel>
+            <ContentControl x:Name="IdlePlaceholder" Grid.Row="1"
+                              HorizontalContentAlignment="Center"
+                              VerticalContentAlignment="Center"
+                              Visibility="Collapsed"
+                              AutomationProperties.AutomationId="NowPlayingIdlePlaceholder">
+                <StackPanel Style="{StaticResource EmptyStatePanelStyle}"
+                            VerticalAlignment="Center">
+                    <Border Width="76" Height="76" CornerRadius="38"
+                            HorizontalAlignment="Center"
+                            Background="{ThemeResource HeroTintBrush}">
+                        <SymbolIcon Symbol="MusicInfo" Width="34" Height="34"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    AutomationProperties.AccessibilityView="Raw" />
+                    </Border>
+                    <TextBlock x:Name="IdleTitleText"
+                               Style="{StaticResource EmptyStateHeadlineStyle}" />
+                    <TextBlock x:Name="IdleBodyText"
+                               Style="{StaticResource EmptyStateGuidanceStyle}" />
+                </StackPanel>
+            </ContentControl>
         </Grid>
     </Grid>
 </UserControl>
