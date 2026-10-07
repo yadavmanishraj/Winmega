@@ -1,21 +1,28 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Omega.Core.Models;
+using Omega.Core.Persistence;
 using Omega.Core.Playback;
 
 namespace Omega.ViewModels;
 
 /// <summary>
-/// Shell state for the floating Now Playing bar: a thin mirror over
-/// the singleton <see cref="IPlaybackGateway"/> (PlayerService,
-/// design §7). The gateway raises <c>StateChanged</c> on the UI
-/// thread, so every sync here is a direct property copy. The
-/// play/pause command forwards to the gateway — the same transport
-/// method the SMTC media keys invoke.
+/// Shell state for the Apple-layout frame (APPLE_LAYOUT_SPEC §1): the
+/// sidebar's user playlists, loaded from <see cref="ILibraryStore"/>,
+/// plus the Now Playing mirror over the singleton
+/// <see cref="IPlaybackGateway"/> (PlayerService, design §7) that the
+/// floating bar used to bind — the LCD strip now binds PlayerViewModel
+/// directly, and the mirror is retained for shell-level state. The
+/// gateway raises <c>StateChanged</c> on the UI thread, so every sync
+/// here is a direct property copy. The play/pause command forwards to
+/// the gateway — the same transport method the SMTC media keys invoke.
 ///
 /// AOT rule (design §3.4 / MVVMTK0045): [ObservableProperty] is used on
 /// PARTIAL PROPERTIES only — the field form is a compile error under
@@ -24,15 +31,51 @@ namespace Omega.ViewModels;
 public partial class ShellViewModel : ObservableObject
 {
     private readonly IPlaybackGateway _playback;
+    private readonly ILibraryStore _library;
     private string? _artworkSongId;
 
-    public ShellViewModel(IPlaybackGateway playback)
+    public ShellViewModel(IPlaybackGateway playback, ILibraryStore library)
     {
         _playback = playback;
+        _library = library;
         NowPlayingTitle = "Nothing playing";
         NowPlayingSubtitle = "Pick a song to start listening";
         _playback.StateChanged += OnPlaybackStateChanged;
         SyncFromPlayback();
+    }
+
+    /// <summary>
+    /// User playlists for the sidebar's Playlists section, in the
+    /// store's creation order. The shell rebuilds its dynamic
+    /// NavigationView items from this collection's change events.
+    /// </summary>
+    public ObservableCollection<LibraryPlaylist> Playlists { get; } = new();
+
+    /// <summary>
+    /// Reloads <see cref="Playlists"/> from the store. Called by the
+    /// shell at startup and after leaving the Library page (playlist
+    /// create/rename/delete happens there). A failed read leaves the
+    /// current list untouched — the shell must never fail to open over
+    /// a library problem.
+    /// </summary>
+    public async Task RefreshPlaylistsAsync()
+    {
+        try
+        {
+            IReadOnlyList<LibraryPlaylist> playlists =
+                await _library.GetPlaylistsAsync();
+            Playlists.Clear();
+            foreach (LibraryPlaylist playlist in playlists)
+            {
+                Playlists.Add(playlist);
+            }
+        }
+        catch (Exception)
+        {
+            // Deliberately swallowed: sidebar playlists are ambient
+            // state; a store hiccup degrades to a stale/empty section,
+            // never a shell crash. No logging infrastructure exists yet.
+        }
     }
 
     [ObservableProperty]

@@ -32,6 +32,10 @@
                     <!-- Purpose-named brushes (never named by hue). -->
                     <SolidColorBrush x:Key="HeroSurfaceBrush" Color="#12122B" />
                     <SolidColorBrush x:Key="HeroTintBrush" Color="#1E1B4B" />
+                    <!-- Transport on-state glyph (shuffle/repeat in the
+                         shell strip): the accent itself, spent on state
+                         only (APPLE_LAYOUT_SPEC §0/§3.3). -->
+                    <SolidColorBrush x:Key="TransportActiveBrush" Color="#3BE477" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
                     <Color x:Key="SystemAccentColor">#2DBE62</Color>
@@ -43,6 +47,7 @@
                     <Color x:Key="SystemAccentColorDark3">#106332</Color>
                     <SolidColorBrush x:Key="HeroSurfaceBrush" Color="#ECECF7" />
                     <SolidColorBrush x:Key="HeroTintBrush" Color="#D9D4F5" />
+                    <SolidColorBrush x:Key="TransportActiveBrush" Color="#2DBE62" />
                 </ResourceDictionary>
                 <!-- HighContrast: intentionally empty for now (design
                      §10) — the platform's SystemColor* brushes already

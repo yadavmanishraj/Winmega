@@ -5,6 +5,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Omega.Core.Models;
 using Omega.Services;
 using Windows.Media.Playback;
@@ -26,6 +28,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 {
     private readonly PlayerService _player;
     private bool _disposed;
+    private string? _artworkSongId;
 
     public PlayerViewModel(PlayerService player)
     {
@@ -33,6 +36,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _player.StateChanged += OnPlayerStateChanged;
         _player.TrackFailed += OnTrackFailed;
         SyncFromPlayer();
+        // Volume is UI-driven only in v1: seed it once from the engine
+        // instead of re-reading it on every 500 ms sync, which would
+        // fight the strip slider while the user drags it.
+        Volume = _player.Volume * 100.0;
     }
 
     /// <summary>The live queue (the service's own collection — ListView reorder writes through).</summary>
@@ -49,6 +56,21 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     public partial string CurrentArtist { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Artwork for the shell's LCD well — parity with the mirror
+    /// <see cref="ShellViewModel"/> kept for the retired floating bar:
+    /// rebuilt only when the track changes (sync runs on every
+    /// 500 ms position tick too).
+    /// </summary>
+    [ObservableProperty]
+    public partial ImageSource? CurrentArtworkSource { get; set; }
+
+    /// <summary>Output volume 0–100 (the service speaks 0.0–1.0).</summary>
+    [ObservableProperty]
+    public partial double Volume { get; set; }
+
+    partial void OnVolumeChanged(double value) => _player.Volume = value / 100.0;
 
     [ObservableProperty]
     public partial bool IsPlaying { get; set; }
@@ -181,6 +203,15 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         if (IsShuffle != _player.Shuffle)
         {
             IsShuffle = _player.Shuffle;
+        }
+
+        // Rebuild the artwork image only when the track changes —
+        // SyncFromPlayer runs on every 500 ms position tick too.
+        if (!string.Equals(_artworkSongId, song?.Id, StringComparison.Ordinal))
+        {
+            _artworkSongId = song?.Id;
+            string? artwork = song?.Image.Best;
+            CurrentArtworkSource = artwork is null ? null : new BitmapImage(new Uri(artwork));
         }
 
         IsSleepTimerActive = _player.IsSleepTimerActive;

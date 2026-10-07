@@ -395,4 +395,72 @@
   <data name="ThemeLight" xml:space="preserve">
     <value>Light</value>
   </data>
+
+  <!-- Apple-layout shell (APPLE_LAYOUT_SPEC §1): NavigationView items
+       bind Content via x:Uid; headers likewise. -->
+  <data name="NavHome.Content" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="SidebarLibraryHeader.Content" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="NavLibrary.Content" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="NavRecentlyAdded.Content" xml:space="preserve">
+    <value>Recently Added</value>
+  </data>
+  <data name="NavArtists.Content" xml:space="preserve">
+    <value>Artists</value>
+  </data>
+  <data name="NavAlbums.Content" xml:space="preserve">
+    <value>Albums</value>
+  </data>
+  <data name="NavSongs.Content" xml:space="preserve">
+    <value>Songs</value>
+  </data>
+  <data name="SidebarPlaylistsHeader.Content" xml:space="preserve">
+    <value>Playlists</value>
+  </data>
+  <data name="NavNewPlaylist.Content" xml:space="preserve">
+    <value>New playlist</value>
+  </data>
+  <data name="NavSettings.Content" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="GoToNowPlaying.Text" xml:space="preserve">
+    <value>Go to Now Playing</value>
+  </data>
+
+  <!-- Apple-layout shell: plain keys consumed from code (Res). -->
+  <data name="Volume" xml:space="preserve">
+    <value>Volume</value>
+  </data>
+  <data name="Mute" xml:space="preserve">
+    <value>Mute</value>
+  </data>
+  <data name="Lyrics" xml:space="preserve">
+    <value>Lyrics</value>
+  </data>
+  <data name="Queue" xml:space="preserve">
+    <value>Queue</value>
+  </data>
+  <data name="NowPlayingFormat" xml:space="preserve">
+    <value>Now playing: {0} by {1}</value>
+  </data>
+  <data name="ShuffleOn" xml:space="preserve">
+    <value>Shuffle on</value>
+  </data>
+  <data name="ShuffleOff" xml:space="preserve">
+    <value>Shuffle off</value>
+  </data>
+  <data name="RepeatOff" xml:space="preserve">
+    <value>Repeat off</value>
+  </data>
+  <data name="RepeatAll" xml:space="preserve">
+    <value>Repeat all</value>
+  </data>
+  <data name="RepeatOne" xml:space="preserve">
+    <value>Repeat one</value>
+  </data>
 </root>
