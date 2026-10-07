@@ -55,23 +55,20 @@
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- ===== Hero zone: header, artwork, title ===== -->
+            <!-- ===== Header (always visible, even when idle):
+                 label, sleep chip, close. The artwork/title zone
+                 below it belongs to the player content, which the
+                 idle placeholder replaces wholesale when nothing is
+                 current (Manish, 2026-10-08). The two tint borders
+                 (header + artwork/title) share HeroTintBrush and sit
+                 flush, so the hero still reads as one zone. ===== -->
             <Border Grid.Row="0" Background="{ThemeResource HeroTintBrush}">
-                <Grid Margin="20,12,12,18">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
+                <Grid Margin="20,12,12,0">
                     <!-- Header: label, sleep chip, close. -->
-                    <Grid Grid.Row="0" ColumnSpacing="8">
+                    <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -102,12 +99,40 @@
                             <SymbolIcon Symbol="Cancel" Width="14" Height="14" />
                         </Button>
                     </Grid>
+                </Grid>
+            </Border>
+
+            <!-- ===== Player content: everything below the header.
+                 Collapsed wholesale when nothing is current; the
+                 idle placeholder (same root row) takes its place. -->
+            <Grid x:Name="PlayerContent" Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+            <!-- ===== Hero zone: artwork, title ===== -->
+            <Border Grid.Row="0" Background="{ThemeResource HeroTintBrush}">
+                <Grid Margin="20,0,12,18">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
                     <!-- Artwork: square, sized in code-behind from
-                         the panel width. The art paints as the
-                         background of a rounded Border so it clips
-                         to the 12px radius exactly. -->
-                    <Grid x:Name="ArtworkHost" Grid.Row="1" Margin="0,10,8,0"
+                         the panel width. A real Image element in a
+                         rounded Border — the app's proven artwork
+                         shape (Detail/Home/LCD). This surface used
+                         to paint through an ImageBrush background,
+                         which never rendered the fresh per-open
+                         BitmapImage: the placeholder collapsed
+                         (source non-null) over a brush that stayed
+                         empty, leaving a blank tint zone (bug,
+                         Manish 2026-10-08). -->
+                    <Grid x:Name="ArtworkHost" Grid.Row="0" Margin="0,10,8,0"
                           HorizontalAlignment="Center">
                         <Border x:Name="ArtworkPlaceholder" CornerRadius="12"
                                 Background="{ThemeResource LayerFillColorAltBrush}">
@@ -115,14 +140,12 @@
                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <Border CornerRadius="12">
-                            <Border.Background>
-                                <ImageBrush x:Name="ArtworkBrush" Stretch="UniformToFill" />
-                            </Border.Background>
+                            <Image x:Name="ArtworkImage" Stretch="UniformToFill" />
                         </Border>
                     </Grid>
 
                     <!-- Title + tappable byline + favourite. -->
-                    <Grid Grid.Row="2" Margin="0,14,8,0" ColumnSpacing="4">
+                    <Grid Grid.Row="1" Margin="0,14,8,0" ColumnSpacing="4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -418,6 +441,31 @@
                                TextTrimming="CharacterEllipsis" />
                 </Border>
             </Grid>
+            </Grid>
+
+            <!-- ===== Idle state: nothing current. One composed
+                 empty state replaces the whole player body (the
+                 header above stays — it carries the close button).
+                 Shown/hidden from RefreshFromViewModel, the panel's
+                 single sync point. ===== -->
+            <StackPanel x:Name="IdlePlaceholder" Grid.Row="1"
+                        Style="{StaticResource EmptyStatePanelStyle}"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed"
+                        AutomationProperties.AutomationId="NowPlayingIdlePlaceholder">
+                <Border Width="76" Height="76" CornerRadius="38"
+                        HorizontalAlignment="Center"
+                        Background="{ThemeResource HeroTintBrush}">
+                    <SymbolIcon Symbol="MusicInfo" Width="34" Height="34"
+                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                AutomationProperties.AccessibilityView="Raw" />
+                </Border>
+                <TextBlock x:Name="IdleTitleText"
+                           Style="{StaticResource EmptyStateHeadlineStyle}" />
+                <TextBlock x:Name="IdleBodyText"
+                           Style="{StaticResource EmptyStateGuidanceStyle}" />
+            </StackPanel>
         </Grid>
     </Grid>
 </UserControl>

@@ -5,14 +5,16 @@
     xmlns:vm="using:Omega.ViewModels"
     xmlns:controls="using:Omega.Controls">
 
-    <!-- Search (design §9.3): the query arrives as a navigation
-         parameter from the shell's sidebar search box (the page has
-         no box of its own). SelectorBar tabs (Top results / Songs /
-         Albums / Artists / Playlists). Each tab keeps its own
-         collection in the ViewModel; the page only switches panel
-         visibility. Song rows are the shared SongRow control
-         (Controls/SongRow.xaml). No page subtitle (AUDIT_2 V-10): the title + the
-         idle hint said the same sentence three times. -->
+    <!-- Search (design §9.3 + Manish, 2026-10-08): the app's one
+         search box lives at the top of THIS page (the sidebar
+         carries a plain Search section row); a query can also still
+         arrive as a navigation parameter. SelectorBar tabs (Top
+         results / Songs / Albums / Artists / Playlists). Each tab
+         keeps its own collection in the ViewModel; the page only
+         switches panel visibility. Song rows are the shared SongRow
+         control (Controls/SongRow.xaml). No page subtitle
+         (AUDIT_2 V-10): the title + the idle hint said the same
+         sentence three times. -->
     <Page.Resources>
         <DataTemplate x:Key="TopResultRowTemplate" x:DataType="vm:SearchResultItemViewModel">
             <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
@@ -78,6 +80,18 @@
     <ScrollViewer>
         <StackPanel Padding="24,24,24,24" Spacing="16">
             <TextBlock x:Uid="SearchTitle" Style="{StaticResource PageTitleStyle}" />
+
+            <!-- The SearchBox id lives exactly once, here.
+                 Submit-only: typing never searches (the behaviour
+                 the sidebar box had); the box takes keyboard focus
+                 when the page is navigated to. -->
+            <AutoSuggestBox x:Name="SearchBox"
+                            x:Uid="SearchBox"
+                            QueryIcon="Find"
+                            MaxWidth="560"
+                            HorizontalAlignment="Left"
+                            AutomationProperties.AutomationId="SearchBox"
+                            QuerySubmitted="SearchBox_QuerySubmitted" />
 
             <SelectorBar x:Name="SearchTabs"
                          AutomationProperties.AutomationId="SearchTabs"

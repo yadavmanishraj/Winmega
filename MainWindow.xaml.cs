@@ -81,7 +81,6 @@ public sealed partial class MainWindow : Window
     private Storyboard? _panelStoryboard;
     private double _panelRequestedWidth = PanelDefaultWidth;
     private double _panelTargetWidth;
-    private object? _navSelectionBeforePanel;
 
     public MainWindow()
     {
@@ -133,7 +132,6 @@ public sealed partial class MainWindow : Window
 
         ContentFrame.NavigationFailed += ContentFrame_NavigationFailed;
         ViewModel.Playlists.CollectionChanged += OnPlaylistsChanged;
-        ViewModel.PropertyChanged += OnShellPropertyChanged;
         Player.PropertyChanged += OnPlayerPropertyChanged;
         Player.Queue.CollectionChanged += OnQueueCollectionChanged;
         InitFlyoutTexts();
@@ -143,8 +141,13 @@ public sealed partial class MainWindow : Window
         UpdateTransportState();
         UpdateNowPlayingName();
         UpdateArtworkPlaceholder();
-        UpdateEndpointStatus();
         UpdateVolumeIcon();
+
+        // Pane toggle (Manish, 2026-10-08): tooltip + accessible
+        // name from resw, like the transport state names.
+        string toggleLabel = Res.Get("ToggleNavigationPane");
+        ToolTipService.SetToolTip(PaneToggleButton, toggleLabel);
+        AutomationProperties.SetName(PaneToggleButton, toggleLabel);
         _ = ViewModel.RefreshPlaylistsAsync();
     }
 
@@ -208,7 +211,6 @@ public sealed partial class MainWindow : Window
 
         // ActualTheme is only settled once the tree is live.
         UpdateTransportState();
-        UpdateEndpointStatus();
         UpdatePassthroughRegions();
     }
 
@@ -216,8 +218,8 @@ public sealed partial class MainWindow : Window
         UpdatePassthroughRegions();
 
     /// <summary>
-    /// Marks the strip's interactive clusters (back button,
-    /// transport cluster, LCD well, right cluster incl. the volume
+    /// Marks the strip's interactive clusters (pane toggle, back
+    /// button, transport cluster, LCD well, right cluster incl. the volume
     /// Slider) as non-client Passthrough rects, so pointer
     /// manipulation that starts on a control belongs to the control
     /// instead of becoming a caption drag. Recomputed on every
@@ -232,7 +234,8 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var rects = new List<RectInt32>(4);
+        var rects = new List<RectInt32>(5);
+        AddPassthroughRect(rects, PaneToggleButton);
         AddPassthroughRect(rects, BackButton);
         AddPassthroughRect(rects, TransportCluster);
         AddPassthroughRect(rects, LcdWell);
@@ -363,19 +366,15 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Tracks the last REAL sidebar selection (any row except the
-    /// Now Playing action row). Opening the panel auto-selects its
-    /// row; the invoke handler restores the tracked selection so
-    /// the sidebar keeps naming the page actually on screen.
+    /// Title-bar pane toggle (Manish, 2026-10-08): flips the pane
+    /// between expanded and icon-rail on demand. PaneDisplayMode
+    /// stays Auto — the width-driven auto-collapse he voted to keep
+    /// (the pane rails itself when the Now Playing panel docks and
+    /// narrows the NavigationView) is untouched; IsPaneOpen is the
+    /// same state the built-in toggle button would drive.
     /// </summary>
-    private void ShellNav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
-    {
-        if (args.SelectedItem is not null
-            && !ReferenceEquals(args.SelectedItem, NavNowPlayingItem))
-        {
-            _navSelectionBeforePanel = args.SelectedItem;
-        }
-    }
+    private void PaneToggle_Click(object sender, RoutedEventArgs e) =>
+        ShellNav.IsPaneOpen = !ShellNav.IsPaneOpen;
 
     private void NavigateByTag(string tag)
     {
@@ -385,22 +384,8 @@ public sealed partial class MainWindow : Window
             case "home":
                 NavigateSection(typeof(HomePage), null);
                 break;
-            case "nowplaying":
-                // Not a page: open the docked panel and hand the
-                // sidebar selection back to the current section
-                // (deferred — the control finishes its own invoke
-                // processing, including the auto-select, first).
-                OpenNowPlayingPanel(null);
-                DispatcherQueue.TryEnqueue(
-                    Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-                    () =>
-                    {
-                        if (_navSelectionBeforePanel is not null
-                            && !ReferenceEquals(ShellNav.SelectedItem, _navSelectionBeforePanel))
-                        {
-                            ShellNav.SelectedItem = _navSelectionBeforePanel;
-                        }
-                    });
+            case "search":
+                NavigateSection(typeof(SearchPage), null);
                 break;
             case "settings":
                 NavigateSection(typeof(SettingsPage), null);
@@ -458,7 +443,13 @@ public sealed partial class MainWindow : Window
 
     private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
     {
+        // The back button exists only when there is somewhere to
+        // go back to (Manish, 2026-10-08): visibility follows the
+        // same CanGoBack state that drives IsEnabled.
         BackButton.IsEnabled = ContentFrame.CanGoBack;
+        BackButton.Visibility = ContentFrame.CanGoBack
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         _currentNavParameter = e.Parameter;
 
         // A successful navigation clears any navigation failure the
@@ -495,8 +486,9 @@ public sealed partial class MainWindow : Window
         }
         else if (e.SourcePageType == typeof(SearchPage))
         {
-            // Search is a field, not a row — nothing stays selected.
-            SetSelectedItem(null);
+            // Search is a real sidebar row now (the input lives on
+            // the page itself).
+            SetSelectedItem(NavSearchItem);
         }
         else if (e.SourcePageType == typeof(LibraryPage))
         {
@@ -604,33 +596,26 @@ public sealed partial class MainWindow : Window
     }
 
     // ------------------------------------------------------------------
-    // Sidebar search (the app's one search box — spec §1/§5)
+    // Search (Manish, 2026-10-08): the sidebar carries a plain
+    // Search section row; the AutoSuggestBox itself lives at the top
+    // of SearchPage and focuses itself on navigation. Ctrl+F is the
+    // same destination: land on the page with its box focused (and
+    // any existing query selected, so typing replaces it).
     // ------------------------------------------------------------------
-
-    private void SidebarSearch_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
-    {
-        // Submit-only: use the submitted query text (ChosenSuggestion
-        // is not used — there is no suggestion list in v1).
-        string query = (args.QueryText ?? string.Empty).Trim();
-        if (query.Length == 0)
-        {
-            return;
-        }
-
-        ContentFrame.Navigate(typeof(SearchPage), query, new SuppressNavigationTransitionInfo());
-    }
 
     private void SearchAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
-        SidebarSearch.Focus(FocusState.Keyboard);
-
-        // Select the existing query so typing REPLACES it (pointer QA
-        // wart: Ctrl+F used to append, producing "Arijit singharijit").
-        // The inner TextBox is a template part of the AutoSuggestBox —
-        // walk the visual tree (no reflection; AOT-safe).
-        if (FindDescendant<TextBox>(SidebarSearch) is { } textBox)
+        if (ContentFrame.CurrentSourcePageType == typeof(SearchPage)
+            && ContentFrame.Content is SearchPage searchPage)
         {
-            textBox.SelectAll();
+            // Already there: no navigation happens, so focus the
+            // live page's box directly.
+            searchPage.FocusSearchBox();
+        }
+        else
+        {
+            // The page focuses its own box in OnNavigatedTo.
+            NavigateSection(typeof(SearchPage), null);
         }
 
         args.Handled = true;
@@ -660,7 +645,31 @@ public sealed partial class MainWindow : Window
     // LCD well + transport state
     // ------------------------------------------------------------------
 
-    private void NowPlayingOpen_Click(object sender, RoutedEventArgs e) =>
+    /// <summary>
+    /// The mini player is a TOGGLE (Manish, 2026-10-08): open (or
+    /// mid-open) closes through the same slide-out + dispose path
+    /// as the panel's ✕; closed (or mid-close) opens — a mid-close
+    /// click revives the closing panel, which OpenNowPlayingPanel
+    /// already handles by cancelling the close slide.
+    /// </summary>
+    private void NowPlayingOpen_Click(object sender, RoutedEventArgs e)
+    {
+        if (_nowPlayingPanel is not null && _panelTargetWidth > 0)
+        {
+            CloseNowPlayingPanel();
+        }
+        else
+        {
+            OpenNowPlayingPanel(null);
+        }
+    }
+
+    /// <summary>
+    /// The LCD ••• menu's "Go to Now Playing" keeps its original
+    /// open-only semantics (a labelled navigation command in a menu
+    /// is not a toggle).
+    /// </summary>
+    private void GoToNowPlayingMenuItem_Click(object sender, RoutedEventArgs e) =>
         OpenNowPlayingPanel(null);
 
     private void OpenQueueMenuItem_Click(object sender, RoutedEventArgs e) =>
@@ -1263,14 +1272,6 @@ public sealed partial class MainWindow : Window
             : Visibility.Collapsed;
     }
 
-    private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ShellViewModel.IsEndpointReachable))
-        {
-            UpdateEndpointStatus();
-        }
-    }
-
     private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         switch (e.PropertyName)
@@ -1314,9 +1315,9 @@ public sealed partial class MainWindow : Window
                 break;
             case nameof(PlayerViewModel.HasPlaybackError):
             case nameof(PlayerViewModel.PlaybackError):
-                // The status dot tells the truth about the last
-                // playback outcome (AUDIT_3 M2).
-                ViewModel.IsEndpointReachable = !Player.HasPlaybackError;
+                // Failure honesty lives in the failure bar (the
+                // strip's endpoint dot was removed, Manish
+                // 2026-10-08).
                 UpdateFailureBar();
                 break;
         }
@@ -1335,14 +1336,22 @@ public sealed partial class MainWindow : Window
         Brush? activeBrush = GetTransportActiveBrush();
         Brush? discBrush = GetThemeBrush("SubtleFillColorSecondaryBrush");
 
-        ShuffleIcon.Foreground = Player.IsShuffle ? activeBrush : null;
+        // Off-state glyph = explicit primary brush, never null:
+        // assigning null here left the shuffle/repeat glyphs
+        // unpainted in the strip (rendered proof 2026-10-08 — the
+        // two icons whose foreground came only from this method
+        // were invisible while prev/next, explicit in XAML,
+        // rendered).
+        Brush? primaryBrush = GetThemeBrush("TextFillColorPrimaryBrush");
+
+        ShuffleIcon.Foreground = Player.IsShuffle ? activeBrush : primaryBrush;
         ShuffleDisc.Fill = Player.IsShuffle ? discBrush : null;
         ShuffleStateDot.Visibility = Player.IsShuffle ? Visibility.Visible : Visibility.Collapsed;
         AutomationProperties.SetName(ShuffleButton,
             Player.IsShuffle ? Res.Get("ShuffleOn") : Res.Get("ShuffleOff"));
 
         bool repeatOn = Player.RepeatMode != RepeatMode.Off;
-        RepeatIcon.Foreground = repeatOn ? activeBrush : null;
+        RepeatIcon.Foreground = repeatOn ? activeBrush : primaryBrush;
         RepeatDisc.Fill = repeatOn ? discBrush : null;
         RepeatStateDot.Visibility = repeatOn ? Visibility.Visible : Visibility.Collapsed;
         AutomationProperties.SetName(RepeatButton, Player.RepeatMode switch
@@ -1434,21 +1443,6 @@ public sealed partial class MainWindow : Window
 
         _navError = null;
         UpdateFailureBar();
-    }
-
-    /// <summary>
-    /// The dot is NOT a live network probe (no probing infrastructure
-    /// exists) and is no longer dressed up as one: it reports the
-    /// last playback outcome through ShellViewModel state — green
-    /// "Direct · JioSaavn" while tracks load, caution + "Connection
-    /// problem" after a failure.
-    /// </summary>
-    private void UpdateEndpointStatus()
-    {
-        bool ok = ViewModel.IsEndpointReachable;
-        StatusDot.Fill = GetThemeBrush(ok ? "SystemFillColorSuccessBrush" : "SystemFillColorCautionBrush");
-        EndpointStatusText.Text = ViewModel.EndpointStatusText;
-        ToolTipService.SetToolTip(EndpointStatusPanel, ViewModel.EndpointStatusText);
     }
 
     // ------------------------------------------------------------------

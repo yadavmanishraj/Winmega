@@ -13,10 +13,11 @@ using Omega.ViewModels;
 namespace Omega.Views;
 
 /// <summary>
-/// Search page (design §9.3). The only search field in the app is the
-/// shell's sidebar box (Apple layout); it navigates here with the query
-/// as a string parameter. Code-behind: query intake on navigation, tab
-/// panel switching, result navigation.
+/// Search page (design §9.3). The app's only search field lives at
+/// the top of this page (Manish, 2026-10-08 — the sidebar carries a
+/// plain Search row); a query can also still arrive as a string
+/// navigation parameter. Code-behind: the box's submit path, query
+/// intake on navigation, tab panel switching, result navigation.
 /// </summary>
 public sealed partial class SearchPage : Page
 {
@@ -49,11 +50,11 @@ public sealed partial class SearchPage : Page
     public ObservableCollection<SearchResultItemViewModel> FilteredTopResults { get; } = new();
 
     /// <summary>
-    /// Sidebar-search handoff: a non-empty string parameter runs the
-    /// search on the Top tab (the exact path the page's own submit
-    /// handler used before the box moved to the shell). A null/other
-    /// parameter leaves the page in its current (idle or previous
-    /// results) state.
+    /// Query intake: a non-empty string parameter fills the box and
+    /// runs the search on the Top tab. A null/other parameter leaves
+    /// the page in its current (idle or previous results) state.
+    /// Either way the box takes keyboard focus, so landing on Search
+    /// means the user can type immediately.
     /// </summary>
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
@@ -61,10 +62,70 @@ public sealed partial class SearchPage : Page
         HookTopResults();
         if (e.Parameter is string query && !string.IsNullOrWhiteSpace(query))
         {
+            SearchBox.Text = query;
             TabTop.IsSelected = true;
             SetTab(0);
             await ViewModel.SearchAsync(query);
         }
+
+        FocusSearchBox();
+    }
+
+    /// <summary>
+    /// The box's submit path — identical to the parameter intake:
+    /// a non-empty query searches on the Top tab (submit-only;
+    /// ChosenSuggestion is not used — there is no suggestion list).
+    /// </summary>
+    private async void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        string query = (args.QueryText ?? string.Empty).Trim();
+        if (query.Length == 0)
+        {
+            return;
+        }
+
+        TabTop.IsSelected = true;
+        SetTab(0);
+        await ViewModel.SearchAsync(query);
+    }
+
+    /// <summary>
+    /// Focuses the search box and selects any existing query so
+    /// typing replaces it. Called on navigation and by the shell's
+    /// Ctrl+F accelerator when this page is already current.
+    /// Enqueued: during OnNavigatedTo the page may not be in the
+    /// live tree yet, and a focus call then is silently dropped.
+    /// </summary>
+    public void FocusSearchBox()
+    {
+        Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().TryEnqueue(() =>
+        {
+            SearchBox.Focus(FocusState.Keyboard);
+            if (FindDescendant<TextBox>(SearchBox) is { } textBox)
+            {
+                textBox.SelectAll();
+            }
+        });
+    }
+
+    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
+    {
+        int count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(root, i);
+            if (child is T match)
+            {
+                return match;
+            }
+
+            if (FindDescendant<T>(child) is { } nested)
+            {
+                return nested;
+            }
+        }
+
+        return null;
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)

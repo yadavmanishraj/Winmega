@@ -66,9 +66,6 @@
   <data name="AppWordmark.Text" xml:space="preserve">
     <value>Omega</value>
   </data>
-  <data name="EndpointStatus.Text" xml:space="preserve">
-    <value>JioSaavn</value>
-  </data>
   <data name="HomeTitle.Text" xml:space="preserve">
     <value>Home</value>
   </data>
@@ -457,8 +454,8 @@
   <data name="NavHome.Content" xml:space="preserve">
     <value>Home</value>
   </data>
-  <data name="NavNowPlaying.Content" xml:space="preserve">
-    <value>Now Playing</value>
+  <data name="NavSearch.Content" xml:space="preserve">
+    <value>Search</value>
   </data>
   <data name="SidebarLibraryHeader.Content" xml:space="preserve">
     <value>Library</value>
@@ -509,6 +506,15 @@
   </data>
   <data name="NowPlayingTitle" xml:space="preserve">
     <value>Now Playing</value>
+  </data>
+  <data name="NowPlayingIdleTitle" xml:space="preserve">
+    <value>Nothing playing</value>
+  </data>
+  <data name="NowPlayingIdleBody" xml:space="preserve">
+    <value>Play a song and it will show up here.</value>
+  </data>
+  <data name="ToggleNavigationPane" xml:space="preserve">
+    <value>Toggle navigation pane</value>
   </data>
   <data name="ShuffleOn" xml:space="preserve">
     <value>Shuffle on</value>
