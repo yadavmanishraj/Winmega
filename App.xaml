@@ -173,7 +173,13 @@
                  compile in App-level templates - WMC0612 - so the
                  button menu is the menu); Play is also on the
                  artwork (hover disc),
-                 so the menu is never the only route to play. -->
+                 so the menu is never the only route to play.
+                 Bindings are classic {Binding} + x:DataType, NOT
+                 {x:Bind}: the XBF generator cannot resolve compiled
+                 bindings in Application-level templates (WMC0612
+                 "Property Not Found" on any x:Bind here, verified by
+                 bisection); SongItemViewModel carries [Bindable] so
+                 the classic bindings stay AOT/trim-clean. -->
             <DataTemplate x:Key="SongRowTemplate" x:DataType="vm:SongItemViewModel">
                 <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
                     <Grid.ColumnDefinitions>
@@ -184,58 +190,58 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Grid Width="48" Height="48">
-                        <Image Source="{x:Bind Artwork}" Width="48" Height="48" Stretch="UniformToFill"
+                        <Image Source="{Binding Artwork}" Width="48" Height="48" Stretch="UniformToFill"
                                AutomationProperties.AccessibilityView="Raw" />
                         <Button Width="28" Height="28" Padding="0" CornerRadius="14"
                                 HorizontalAlignment="Left" VerticalAlignment="Bottom"
                                 Background="{ThemeResource ControlFillColorDefaultBrush}"
                                 BorderThickness="0"
-                                Command="{x:Bind PlayCommand}"
+                                Command="{Binding PlayCommand}"
                                 AutomationProperties.AutomationId="SongArtworkPlayButton"
                                 AutomationProperties.Name="Play">
                             <FontIcon Glyph="&#xE768;" FontSize="12" />
                         </Button>
                     </Grid>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                        <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                        <TextBlock Text="{Binding Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
                                    TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{x:Bind Artists}" Style="{StaticResource SecondaryCaptionStyle}"
+                        <TextBlock Text="{Binding Artists}" Style="{StaticResource SecondaryCaptionStyle}"
                                    TextTrimming="CharacterEllipsis" />
                     </StackPanel>
-                    <TextBlock Grid.Column="2" Text="{x:Bind DurationText}"
+                    <TextBlock Grid.Column="2" Text="{Binding DurationText}"
                                Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
                     <Button Grid.Column="3" Style="{StaticResource IconButtonStyle}"
-                            Command="{x:Bind ToggleFavoriteCommand}"
+                            Command="{Binding ToggleFavoriteCommand}"
                             AutomationProperties.AutomationId="SongFavoriteButton"
-                            AutomationProperties.Name="{x:Bind FavoriteMenuText, Mode=OneWay}">
-                        <FontIcon Glyph="{x:Bind FavoriteGlyph, Mode=OneWay}" FontSize="18" />
+                            AutomationProperties.Name="{Binding FavoriteMenuText}">
+                        <FontIcon Glyph="{Binding FavoriteGlyph}" FontSize="18" />
                     </Button>
                     <Button Grid.Column="4" Style="{StaticResource IconButtonStyle}"
                             AutomationProperties.AutomationId="SongMoreButton"
-                            AutomationProperties.Name="{x:Bind MoreActionsName}">
+                            AutomationProperties.Name="{Binding MoreActionsName}">
                         <FontIcon Glyph="&#xE712;" FontSize="18" />
                         <Button.Flyout>
                             <MenuFlyout>
-                                <MenuFlyoutItem x:Uid="PlayMenuItem" Command="{x:Bind PlayCommand}"
+                                <MenuFlyoutItem x:Uid="PlayMenuItem" Command="{Binding PlayCommand}"
                                                 AutomationProperties.AutomationId="SongPlayMenuItem" />
-                                <MenuFlyoutItem x:Uid="PlayNextMenuItem" Command="{x:Bind PlayNextCommand}"
-                                                Visibility="{x:Bind CanPlayNext, Converter={StaticResource BoolToVisibilityConverter}}"
+                                <MenuFlyoutItem x:Uid="PlayNextMenuItem" Command="{Binding PlayNextCommand}"
+                                                Visibility="{Binding CanPlayNext, Converter={StaticResource BoolToVisibilityConverter}}"
                                                 AutomationProperties.AutomationId="SongPlayNextMenuItem" />
-                                <MenuFlyoutItem x:Uid="AddToQueueMenuItem" Command="{x:Bind AddToQueueCommand}"
-                                                Visibility="{x:Bind CanAddToQueue, Converter={StaticResource BoolToVisibilityConverter}}"
+                                <MenuFlyoutItem x:Uid="AddToQueueMenuItem" Command="{Binding AddToQueueCommand}"
+                                                Visibility="{Binding CanAddToQueue, Converter={StaticResource BoolToVisibilityConverter}}"
                                                 AutomationProperties.AutomationId="SongAddToQueueMenuItem" />
-                                <MenuFlyoutItem Text="{x:Bind FavoriteMenuText, Mode=OneWay}"
-                                                Command="{x:Bind ToggleFavoriteCommand}"
+                                <MenuFlyoutItem Text="{Binding FavoriteMenuText}"
+                                                Command="{Binding ToggleFavoriteCommand}"
                                                 AutomationProperties.AutomationId="SongFavoriteMenuItem" />
-                                <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
-                                                IsEnabled="{x:Bind CanAddToPlaylist}"
+                                <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{Binding AddToPlaylistCommand}"
+                                                IsEnabled="{Binding CanAddToPlaylist}"
                                                 AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
-                                <MenuFlyoutItem x:Uid="DownloadMenuItem" Command="{x:Bind DownloadCommand}"
-                                                Visibility="{x:Bind CanDownload, Converter={StaticResource BoolToVisibilityConverter}}"
+                                <MenuFlyoutItem x:Uid="DownloadMenuItem" Command="{Binding DownloadCommand}"
+                                                Visibility="{Binding CanDownload, Converter={StaticResource BoolToVisibilityConverter}}"
                                                 AutomationProperties.AutomationId="SongDownloadMenuItem" />
-                                <MenuFlyoutItem Text="{x:Bind RemoveMenuText}"
-                                                Command="{x:Bind RemoveCommand}"
-                                                Visibility="{x:Bind CanRemove, Converter={StaticResource BoolToVisibilityConverter}}"
+                                <MenuFlyoutItem Text="{Binding RemoveMenuText}"
+                                                Command="{Binding RemoveCommand}"
+                                                Visibility="{Binding CanRemove, Converter={StaticResource BoolToVisibilityConverter}}"
                                                 AutomationProperties.AutomationId="SongRemoveMenuItem" />
                             </MenuFlyout>
                         </Button.Flyout>
