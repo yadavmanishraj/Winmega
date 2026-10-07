@@ -13,4 +13,6 @@ public sealed record Album(
     bool Explicit,
     int SongCount,
     ArtistGroups Artists,
-    IReadOnlyList<Song> Songs);
+    IReadOnlyList<Song> Songs,
+    string? CopyrightText,
+    bool IsDolbyContent);

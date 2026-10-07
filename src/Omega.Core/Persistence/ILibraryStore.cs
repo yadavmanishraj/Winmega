@@ -41,6 +41,23 @@ public interface ILibraryStore
     /// </summary>
     Task SetFavoriteAsync(Song song, bool isFavorite, CancellationToken ct = default);
 
+    /// <summary>
+    /// Favorited non-song entities (albums, playlists, artists), most
+    /// recently favorited first.
+    /// </summary>
+    Task<IReadOnlyList<FavoriteEntity>> GetFavoriteEntitiesAsync(CancellationToken ct = default);
+
+    /// <summary>True when the entity (by kind + id) is currently a favorite.</summary>
+    Task<bool> IsFavoriteEntityAsync(string kind, string id, CancellationToken ct = default);
+
+    /// <summary>
+    /// Adds (<paramref name="isFavorite"/> = true) or removes the entity
+    /// from favorites. Adding an existing favorite refreshes its render
+    /// snapshot but keeps its original position. Keyed by
+    /// (kind, id) — the same id under different kinds is independent.
+    /// </summary>
+    Task SetFavoriteEntityAsync(FavoriteEntity entity, bool isFavorite, CancellationToken ct = default);
+
     /// <summary>All user playlists in creation order, with song counts.</summary>
     Task<IReadOnlyList<LibraryPlaylist>> GetPlaylistsAsync(CancellationToken ct = default);
 

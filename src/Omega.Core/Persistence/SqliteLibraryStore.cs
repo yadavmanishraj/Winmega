@@ -150,6 +150,86 @@ public sealed class SqliteLibraryStore : ILibraryStore
         }, ct);
     }
 
+    public Task<IReadOnlyList<FavoriteEntity>> GetFavoriteEntitiesAsync(CancellationToken ct = default) =>
+        RunAsync(async (connection, token) =>
+        {
+            using SqliteCommand cmd = CreateCommand(
+                connection,
+                """
+                SELECT kind, entity_id, title, subtitle, image_url, url
+                FROM favorite_entities
+                ORDER BY added_at DESC;
+                """);
+            var entities = new List<FavoriteEntity>();
+            await using SqliteDataReader reader = await cmd.ExecuteReaderAsync(token);
+            while (await reader.ReadAsync(token))
+            {
+                entities.Add(new FavoriteEntity(
+                    Kind: reader.GetString(0),
+                    Id: reader.GetString(1),
+                    Title: reader.GetString(2),
+                    Subtitle: GetNullableString(reader, 3),
+                    ImageUrl: GetNullableString(reader, 4),
+                    Url: GetNullableString(reader, 5)));
+            }
+
+            return (IReadOnlyList<FavoriteEntity>)entities;
+        }, ct);
+
+    public Task<bool> IsFavoriteEntityAsync(string kind, string id, CancellationToken ct = default) =>
+        RunAsync(async (connection, token) =>
+        {
+            using SqliteCommand cmd = CreateCommand(
+                connection,
+                "SELECT COUNT(*) FROM favorite_entities WHERE kind = $kind AND entity_id = $entityId;",
+                ("$kind", kind),
+                ("$entityId", id));
+            long count = (long)(await cmd.ExecuteScalarAsync(token))!;
+            return count > 0;
+        }, ct);
+
+    public Task SetFavoriteEntityAsync(FavoriteEntity entity, bool isFavorite, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        return RunAsync(async (connection, token) =>
+        {
+            if (isFavorite)
+            {
+                // Re-favoriting refreshes the render snapshot but keeps
+                // the original added_at (and thus the entry's position),
+                // exactly like song favorites.
+                using SqliteCommand cmd = CreateCommand(
+                    connection,
+                    """
+                    INSERT INTO favorite_entities (kind, entity_id, title, subtitle, image_url, url, added_at)
+                    VALUES ($kind, $entityId, $title, $subtitle, $imageUrl, $url, $addedAt)
+                    ON CONFLICT(kind, entity_id) DO UPDATE SET
+                        title = excluded.title,
+                        subtitle = excluded.subtitle,
+                        image_url = excluded.image_url,
+                        url = excluded.url;
+                    """,
+                    ("$kind", entity.Kind),
+                    ("$entityId", entity.Id),
+                    ("$title", entity.Title),
+                    ("$subtitle", entity.Subtitle),
+                    ("$imageUrl", entity.ImageUrl),
+                    ("$url", entity.Url),
+                    ("$addedAt", NextTimestampMs()));
+                await cmd.ExecuteNonQueryAsync(token);
+            }
+            else
+            {
+                using SqliteCommand cmd = CreateCommand(
+                    connection,
+                    "DELETE FROM favorite_entities WHERE kind = $kind AND entity_id = $entityId;",
+                    ("$kind", entity.Kind),
+                    ("$entityId", entity.Id));
+                await cmd.ExecuteNonQueryAsync(token);
+            }
+        }, ct);
+    }
+
     public Task<IReadOnlyList<LibraryPlaylist>> GetPlaylistsAsync(CancellationToken ct = default) =>
         RunAsync(async (connection, token) =>
         {
@@ -641,6 +721,16 @@ public sealed class SqliteLibraryStore : ILibraryStore
             song_id  TEXT PRIMARY KEY,
             snapshot TEXT NOT NULL,
             added_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS favorite_entities (
+            kind      TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            title     TEXT NOT NULL,
+            subtitle  TEXT,
+            image_url TEXT,
+            url       TEXT,
+            added_at  INTEGER NOT NULL,
+            PRIMARY KEY (kind, entity_id)
         );
         CREATE TABLE IF NOT EXISTS playlists (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,

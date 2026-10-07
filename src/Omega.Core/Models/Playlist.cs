@@ -17,4 +17,7 @@ public sealed record Playlist(
     int SongCount,
     string? OwnerName,
     IReadOnlyList<ArtistRef> Artists,
-    IReadOnlyList<Song> Songs);
+    IReadOnlyList<Song> Songs,
+    long? FollowerCount,
+    DateTimeOffset? LastUpdatedUtc,
+    bool IsDolbyContent);

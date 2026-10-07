@@ -255,6 +255,186 @@ internal static class Fixtures
         }
         """;
 
+    /// <summary>
+    /// content.getAlbumDetails payload: full header (copyright_text and
+    /// the real-bool is_dolby_content previously dropped by the model),
+    /// one inlined track.
+    /// </summary>
+    public const string AlbumDetailsJson = """
+        {
+          "id": "38682222",
+          "title": "Bhediya",
+          "subtitle": "Sachin-Jigar",
+          "header_desc": "Bhediya (Hindi) film soundtrack",
+          "type": "album",
+          "perma_url": "https://www.jiosaavn.com/album/bhediya/38682222",
+          "image": "https://c.saavncdn.com/001/Bhediya-Hindi-2022-150x150.jpg",
+          "language": "hindi",
+          "year": "2023",
+          "play_count": "1234567",
+          "explicit_content": "0",
+          "list_count": "6",
+          "list": [
+            { "id": "sng00001", "title": "Thumkeshwari", "type": "song", "more_info": { "duration": "180" } }
+          ],
+          "more_info": {
+            "song_count": "6",
+            "copyright_text": "℗ 2023 Zee Music Company",
+            "is_dolby_content": true,
+            "artistMap": {
+              "primary_artists": [
+                {
+                  "id": "461968",
+                  "name": "Sachin-Jigar",
+                  "role": "primary_artists",
+                  "type": "artist",
+                  "image": "https://c.saavncdn.com/artists/Sachin-Jigar-150x150.jpg",
+                  "perma_url": "https://www.jiosaavn.com/artist/sachin-jigar-songs/461968"
+                }
+              ],
+              "featured_artists": [],
+              "artists": []
+            }
+          }
+        }
+        """;
+
+    /// <summary>
+    /// playlist.getDetails payload (trimmed from the live probe of
+    /// playlist 802336660): the owner is the internal handle
+    /// "phulki_user" in username/uid but the display name "JioSaavn"
+    /// in firstname; follower_count is plain digits while fan_count is
+    /// pre-formatted; last_updated is epoch seconds as a string.
+    /// </summary>
+    public const string PlaylistDetailsJson = """
+        {
+          "id": "802336660",
+          "title": "Arijit Singh - Sad Songs - Hindi",
+          "subtitle": "Just Updated",
+          "header_desc": "Hindi sad songs of Arijit Singh",
+          "type": "playlist",
+          "perma_url": "https://www.jiosaavn.com/featured/arijit-singh-sad-songs-hindi/802336660",
+          "image": "https://c.saavncdn.com/003/Y-150x150.jpg",
+          "list_count": "25",
+          "list": "",
+          "more_info": {
+            "uid": "phulki_user",
+            "username": "phulki_user",
+            "firstname": "JioSaavn",
+            "lastname": "",
+            "follower_count": "366849",
+            "fan_count": "366,839",
+            "last_updated": "1791281247",
+            "is_dolby_content": true
+          }
+        }
+        """;
+
+    /// <summary>
+    /// artist.getArtistPageDetails payload (trimmed from the live probe
+    /// of artist 459320, Arijit Singh): subtitle is the ready-made
+    /// "Artist • N Listeners" byline; bio is a JSON-encoded string;
+    /// singles and latest_release are album-LITE items (type "album",
+    /// list "", no media fields) — not songs; the playlist rails carry
+    /// their counts only in more_info.song_count.
+    /// </summary>
+    public const string ArtistPageJson = """
+        {
+          "artistId": "459320",
+          "name": "Arijit Singh",
+          "subtitle": "Artist • 9503254 Listeners",
+          "image": "https://c.saavncdn.com/artists/Arijit-Singh-150x150.jpg",
+          "follower_count": "107974103",
+          "fan_count": "9503254",
+          "type": "artist",
+          "isVerified": true,
+          "dominantLanguage": "hindi",
+          "dominantType": "singer",
+          "bio": "[{\"text\":\"Arijit Singh is an Indian playback singer.\",\"title\":\"Introduction\",\"sequence\":\"1\"}]",
+          "dob": "25-04-1987",
+          "wiki": "http://en.wikipedia.org/wiki/Arijit_Singh",
+          "availableLanguages": ["hindi", "bengali", "unknown"],
+          "urls": {
+            "overview": "https://www.jiosaavn.com/artist/arijit-singh-songs/459320",
+            "songs": "https://www.jiosaavn.com/artist/arijit-singh-songs/459320",
+            "albums": "https://www.jiosaavn.com/artist/arijit-singh-songs/459320"
+          },
+          "topSongs": [
+            {
+              "id": "aRZbUYD7",
+              "title": "Tum Hi Ho",
+              "type": "song",
+              "image": "https://c.saavncdn.com/430/Aashiqui-2-Hindi-2013-150x150.jpg",
+              "more_info": { "duration": "262" }
+            }
+          ],
+          "topAlbums": [
+            {
+              "id": "1123456",
+              "title": "Aashiqui 2",
+              "type": "album",
+              "image": "https://c.saavncdn.com/430/Aashiqui-2-Hindi-2013-150x150.jpg",
+              "year": "2013",
+              "list": "",
+              "more_info": { "song_count": "11" }
+            }
+          ],
+          "latest_release": [
+            {
+              "id": "51000009",
+              "title": "Newest Single Album",
+              "type": "album",
+              "image": "https://c.saavncdn.com/020/L-150x150.jpg",
+              "year": "2026",
+              "list": "",
+              "more_info": { "song_count": "1" }
+            }
+          ],
+          "singles": [
+            {
+              "id": "51000001",
+              "title": "Kesariya (Single)",
+              "type": "album",
+              "image": "https://c.saavncdn.com/021/S-150x150.jpg",
+              "year": "2022",
+              "list": "",
+              "more_info": { "song_count": "1" }
+            }
+          ],
+          "dedicated_artist_playlist": [
+            {
+              "id": "pl100",
+              "title": "Just Arijit Singh",
+              "subtitle": "25 Songs",
+              "type": "playlist",
+              "image": "https://c.saavncdn.com/022/D-150x150.jpg",
+              "list": "",
+              "more_info": { "song_count": "25", "firstname": "JioSaavn" }
+            }
+          ],
+          "featured_artist_playlist": [
+            {
+              "id": "pl200",
+              "title": "Featured In: Bollywood Romance",
+              "subtitle": "30 Songs",
+              "type": "playlist",
+              "image": "https://c.saavncdn.com/023/F-150x150.jpg",
+              "list": "",
+              "more_info": { "song_count": "30", "firstname": "JioSaavn" }
+            }
+          ],
+          "similarArtists": [
+            {
+              "id": "881158",
+              "name": "Atif Aslam",
+              "perma_url": "https://www.jiosaavn.com/artist/atif-aslam-songs/881158",
+              "image_url": "https://c.saavncdn.com/artists/Atif-Aslam-150x150.jpg",
+              "type": "artist"
+            }
+          ]
+        }
+        """;
+
     /// <summary>lyrics.getLyrics success body (lyrics_id = the song id).</summary>
     public const string LyricsJson = """
         {

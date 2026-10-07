@@ -320,4 +320,77 @@ public class LibraryStoreTests
             TryDeleteDb(dbPath);
         }
     }
+
+    [Fact]
+    public async Task FavoriteEntities_SetGetRemove_RoundTrips_AndKindsAreIndependent()
+    {
+        string dbPath = NewTempDbPath();
+        try
+        {
+            var store = new SqliteLibraryStore(dbPath);
+            var album = new FavoriteEntity(
+                Kind: "album",
+                Id: "38682222",
+                Title: "Bhediya",
+                Subtitle: "Sachin-Jigar",
+                ImageUrl: "https://c.saavncdn.com/001/Bhediya-Hindi-2022-500x500.jpg",
+                Url: "https://www.jiosaavn.com/album/bhediya/38682222");
+            var artist = new FavoriteEntity(
+                Kind: "artist",
+                Id: "459320",
+                Title: "Arijit Singh",
+                Subtitle: "Artist • 9503254 Listeners",
+                ImageUrl: null,
+                Url: null);
+            // Same id as the album but a different kind: independent row.
+            var playlist = new FavoriteEntity(
+                Kind: "playlist",
+                Id: "38682222",
+                Title: "Bhediya Party Mix",
+                Subtitle: null,
+                ImageUrl: null,
+                Url: null);
+
+            Assert.Empty(await store.GetFavoriteEntitiesAsync());
+            Assert.False(await store.IsFavoriteEntityAsync("album", album.Id));
+
+            await store.SetFavoriteEntityAsync(album, isFavorite: true);
+            await store.SetFavoriteEntityAsync(artist, isFavorite: true);
+            await store.SetFavoriteEntityAsync(playlist, isFavorite: true);
+
+            Assert.True(await store.IsFavoriteEntityAsync("album", "38682222"));
+            Assert.True(await store.IsFavoriteEntityAsync("playlist", "38682222"));
+            Assert.True(await store.IsFavoriteEntityAsync("artist", "459320"));
+            Assert.False(await store.IsFavoriteEntityAsync("artist", "38682222"));
+
+            // Most recently favorited first; full snapshot round-trips.
+            IReadOnlyList<FavoriteEntity> favorites = await store.GetFavoriteEntitiesAsync();
+            Assert.Equal(new[] { playlist, artist, album }, favorites);
+
+            // Re-favoriting refreshes the snapshot but keeps the position.
+            FavoriteEntity refreshed = album with { Title = "Bhediya (Deluxe)" };
+            await store.SetFavoriteEntityAsync(refreshed, isFavorite: true);
+            favorites = await store.GetFavoriteEntitiesAsync();
+            Assert.Equal(3, favorites.Count);
+            Assert.Equal(refreshed, favorites[2]);
+
+            // Removal is by (kind, id): the playlist sharing the id stays.
+            await store.SetFavoriteEntityAsync(album, isFavorite: false);
+            Assert.False(await store.IsFavoriteEntityAsync("album", "38682222"));
+            Assert.True(await store.IsFavoriteEntityAsync("playlist", "38682222"));
+            Assert.Equal(
+                new[] { playlist, artist },
+                await store.GetFavoriteEntitiesAsync());
+
+            // Survives a new store instance over the same file.
+            var reopened = new SqliteLibraryStore(dbPath);
+            Assert.Equal(
+                new[] { playlist, artist },
+                await reopened.GetFavoriteEntitiesAsync());
+        }
+        finally
+        {
+            TryDeleteDb(dbPath);
+        }
+    }
 }

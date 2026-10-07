@@ -63,6 +63,9 @@ public sealed class RawPlaylistMoreInfoDto
     [JsonPropertyName("follower_count")] public string? FollowerCount { get; set; }
     [JsonPropertyName("fan_count")] public string? FanCount { get; set; }
 
+    // Unix epoch SECONDS as a string ("1791281247"); converted in the mapper.
+    [JsonPropertyName("last_updated")] public string? LastUpdated { get; set; }
+
     [JsonPropertyName("is_dolby_content")]
     [JsonConverter(typeof(FlexibleBoolConverter))]
     public bool IsDolbyContent { get; set; }
