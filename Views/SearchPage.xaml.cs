@@ -3,8 +3,10 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using Omega.Core.Models;
 using Omega.Core.Persistence;
@@ -35,6 +37,7 @@ public sealed partial class SearchPage : Page
     public SearchViewModel ViewModel { get; }
 
     private bool _topResultsHooked;
+    private int _searchFocusRequest;
 
     /// <summary>
     /// The Top tab's rows as actually rendered: ViewModel.TopResults
@@ -91,21 +94,62 @@ public sealed partial class SearchPage : Page
 
     /// <summary>
     /// Focuses the search box and selects any existing query so
-    /// typing replaces it. Called on navigation and by the shell's
-    /// Ctrl+F accelerator when this page is already current.
-    /// Enqueued: during OnNavigatedTo the page may not be in the
-    /// live tree yet, and a focus call then is silently dropped.
+    /// typing replaces it. Called on navigation, again by the shell
+    /// after its post-navigation selection sync, and by Ctrl+F when
+    /// this page is already current.
+    ///
+    /// The request is deliberately queued at Low priority and
+    /// retried a bounded number of times. A normal-priority request
+    /// from OnNavigatedTo can run before Frame navigation has
+    /// finished settling; the shell then assigns NavSearchItem to
+    /// NavigationView.SelectedItem, and the NavigationView moves
+    /// keyboard focus to that selected item. Low priority runs
+    /// behind that navigation/selection work, and the retry covers
+    /// a Focus call made before the AutoSuggestBox template's inner
+    /// TextBox is ready to accept it.
     /// </summary>
     public void FocusSearchBox()
     {
-        Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().TryEnqueue(() =>
-        {
-            SearchBox.Focus(FocusState.Keyboard);
-            if (FindDescendant<TextBox>(SearchBox) is { } textBox)
+        int request = ++_searchFocusRequest;
+        EnqueueSearchBoxFocus(request, attempt: 0);
+    }
+
+    private void EnqueueSearchBoxFocus(int request, int attempt)
+    {
+        DispatcherQueue.GetForCurrentThread().TryEnqueue(
+            DispatcherQueuePriority.Low,
+            () =>
             {
-                textBox.SelectAll();
-            }
-        });
+                if (request != _searchFocusRequest)
+                {
+                    return;
+                }
+
+                TextBox? textBox = FindDescendant<TextBox>(SearchBox);
+                bool focusAccepted = SearchBox.Focus(FocusState.Keyboard);
+                if (!focusAccepted && textBox is not null)
+                {
+                    focusAccepted = textBox.Focus(FocusState.Keyboard);
+                }
+
+                object? focusedElement = XamlRoot is null
+                    ? null
+                    : FocusManager.GetFocusedElement(XamlRoot);
+                bool boxHasFocus = focusAccepted
+                    || ReferenceEquals(focusedElement, SearchBox)
+                    || (textBox is not null && ReferenceEquals(focusedElement, textBox));
+
+                if (boxHasFocus)
+                {
+                    textBox?.SelectAll();
+                    return;
+                }
+
+                if (attempt < 10)
+                {
+                    EnqueueSearchBoxFocus(request, attempt + 1);
+                }
+            });
     }
 
     private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
@@ -130,6 +174,9 @@ public sealed partial class SearchPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
+        // A queued focus request belongs to this arrival only; do
+        // not let it pull focus back after the user has moved on.
+        _searchFocusRequest++;
         UnhookTopResults();
         ViewModel.CancelLoads();
         base.OnNavigatedFrom(e);
