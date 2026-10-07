@@ -128,7 +128,7 @@ public partial class HomeViewModel : ObservableObject
             // (already loaded) remote sections down with it.
             try
             {
-                IReadOnlyList<Song> history = await _store.GetHistoryAsync(20);
+                IReadOnlyList<Song> history = await _store.GetHistoryAsync(30);
                 JumpBackInItems.Clear();
                 foreach (Song song in history)
                 {
@@ -240,7 +240,10 @@ public partial class HomeViewModel : ObservableObject
     private void FillEntities(ObservableCollection<HomeItemViewModel> target, IReadOnlyList<HomeEntity> entities)
     {
         target.Clear();
-        foreach (HomeEntity entity in entities)
+        // Sections cap at 30 items (HOME_PAGE_DESIGN §2): the 2-row
+        // grids scroll horizontally, so the cap bounds realization
+        // cost without hiding anything a "see all" page would hold.
+        foreach (HomeEntity entity in entities.Take(30))
         {
             target.Add(new HomeItemViewModel(entity, item => PlayEntityAsync(item)));
         }
