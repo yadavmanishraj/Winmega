@@ -36,6 +36,13 @@ public partial class HomeItemViewModel : ObservableObject
 
     public ImageSource? LargeArtwork => ArtworkHelper.From(Entity.Image.Large ?? Entity.Image.Medium);
 
+    /// <summary>
+    /// Originating surface hint forwarded into <see cref="DetailArgs"/>
+    /// (e.g. "charts" for Home's Charts section, set by HomeViewModel's
+    /// fill); null everywhere else.
+    /// </summary>
+    public string? NavigationSource { get; set; }
+
     /// <summary>Songs play directly; albums with an embedded track list play their tracks.</summary>
     public bool IsPlayable =>
         Kind == HomeEntityKind.Song ||
@@ -65,7 +72,7 @@ public partial class HomeItemViewModel : ObservableObject
         string? image = Entity.Image.Large ?? Entity.Image.Medium;
         if (!string.IsNullOrWhiteSpace(Entity.Id))
         {
-            return new DetailNavigationArgs(kind, Entity.Id, Entity.Title, Entity.Subtitle, image);
+            return new DetailNavigationArgs(kind, Entity.Id, Entity.Title, Entity.Subtitle, image, Source: NavigationSource);
         }
 
         string? token = ExtractLinkToken(Entity.Url);
@@ -74,7 +81,7 @@ public partial class HomeItemViewModel : ObservableObject
             return null;
         }
 
-        return new DetailNavigationArgs(kind, string.Empty, Entity.Title, Entity.Subtitle, image, Token: token);
+        return new DetailNavigationArgs(kind, string.Empty, Entity.Title, Entity.Subtitle, image, Token: token, Source: NavigationSource);
     }
 
     /// <summary>The link token is the last path segment of a JioSaavn perma-URL.</summary>

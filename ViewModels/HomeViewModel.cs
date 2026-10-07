@@ -116,7 +116,7 @@ public partial class HomeViewModel : ObservableObject
 
             FillEntities(TrendingItems, modules.NewTrending);
             FillEntities(NewAlbumItems, modules.NewAlbums);
-            FillEntities(ChartItems, modules.Charts);
+            FillEntities(ChartItems, modules.Charts, "charts");
             FillEntities(TopPlaylistItems, modules.TopPlaylists);
 
             Hero = TrendingItems.FirstOrDefault() ?? NewAlbumItems.FirstOrDefault();
@@ -235,7 +235,7 @@ public partial class HomeViewModel : ObservableObject
     private IReadOnlyList<Song> HistorySongs() =>
         JumpBackInItems.Select(r => r.Song).ToList();
 
-    private void FillEntities(ObservableCollection<HomeItemViewModel> target, IReadOnlyList<HomeEntity> entities)
+    private void FillEntities(ObservableCollection<HomeItemViewModel> target, IReadOnlyList<HomeEntity> entities, string? source = null)
     {
         target.Clear();
         // Sections cap at 30 items (HOME_PAGE_DESIGN §2): the 2-row
@@ -243,7 +243,7 @@ public partial class HomeViewModel : ObservableObject
         // cost without hiding anything a "see all" page would hold.
         foreach (HomeEntity entity in entities.Take(30))
         {
-            target.Add(new HomeItemViewModel(entity, item => PlayEntityAsync(item)));
+            target.Add(new HomeItemViewModel(entity, item => PlayEntityAsync(item)) { NavigationSource = source });
         }
     }
 
