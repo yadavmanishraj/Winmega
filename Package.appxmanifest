@@ -4,9 +4,7 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
-  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  xmlns:systemai="http://schemas.microsoft.com/appx/manifest/systemai/windows10"
-  IgnorableNamespaces="uap rescap systemai">
+  IgnorableNamespaces="uap">
 
   <Identity
     Name="441dbf34-fe20-45e9-a1f2-eb7e6acbd061"
@@ -47,13 +45,15 @@
   </Applications>
 
   <Capabilities>
-    <rescap:Capability Name="runFullTrust" />
-    <systemai:Capability Name="systemAIModels"/>
-    <!-- Added 2026-10-07 with the Core port: a packaged app gets NO
-         outbound internet without this capability, and every Omega
-         feature talks to www.jiosaavn.com. Least-privilege trimming
-         of the template's runFullTrust / systemAIModels (unused by
-         this app) is a separate, deliberate step. -->
+    <!-- Least-privilege (trimmed 2026-10-07): internetClient was
+         added with the Core port because a packaged app gets NO
+         outbound internet without it, and every Omega feature talks
+         to www.jiosaavn.com — it is the one capability this app
+         needs. The VS template's runFullTrust and systemAIModels
+         were removed after a full-codebase audit: the app uses no
+         full-trust-only APIs (no P/Invoke, process launches,
+         registry access, or file access outside app-local storage)
+         and no on-device AI APIs. -->
     <Capability Name="internetClient" />
   </Capabilities>
 </Package>
