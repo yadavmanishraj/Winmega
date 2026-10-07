@@ -13,15 +13,22 @@ namespace Omega.ViewModels;
 /// be handed straight to <c>Song.StreamUrlFor</c>. Theme mode stores
 /// <c>"System"</c> / <c>"Dark"</c> / <c>"Light"</c>; applying it to the
 /// visual tree is the page's job via <c>App.ApplyThemeMode</c> (the
-/// shell owns the root element, design §9.6).
+/// shell owns the root element, design §9.6). The Now Playing FX mode
+/// stores <c>"Aurora"</c> / <c>"Particles"</c> / <c>"Pulse"</c> /
+/// <c>"Off"</c>; the panel reads it through
+/// <see cref="ReadNowPlayingFxMode"/> when it is constructed.
 /// </summary>
 public partial class SettingsViewModel : ObservableObject
 {
     public const string StreamQualityKey = "StreamQuality";
     public const string ThemeModeKey = "ThemeMode";
+    public const string NowPlayingFxModeKey = "NowPlayingFxMode";
 
     private static readonly string[] QualityValues =
         { "Auto", "12kbps", "48kbps", "96kbps", "160kbps", "320kbps" };
+
+    private static readonly string[] FxModeValues =
+        { "Aurora", "Particles", "Pulse", "Off" };
 
     /// <summary>Raised after the theme mode changes; the page applies it to the root element.</summary>
     public event Action<string>? ThemeModeChanged;
@@ -43,6 +50,13 @@ public partial class SettingsViewModel : ObservableObject
             Res.Get("ThemeDark"),
             Res.Get("ThemeLight"),
         };
+        FxModeOptions = new[]
+        {
+            Res.Get("FxAurora"),
+            Res.Get("FxParticles"),
+            Res.Get("FxPulse"),
+            Res.Get("FxOff"),
+        };
 
         // Assigned through the generated properties (the generator owns
         // the backing fields for partial properties). The change hooks
@@ -59,11 +73,17 @@ public partial class SettingsViewModel : ObservableObject
             "Light" => 2,
             _ => 0,
         };
+
+        string fxMode = ReadSetting(NowPlayingFxModeKey, "Aurora");
+        int fxIndex = Array.IndexOf(FxModeValues, fxMode);
+        FxModeIndex = fxIndex >= 0 ? fxIndex : 0;
     }
 
     public string[] QualityOptions { get; }
 
     public string[] ThemeOptions { get; }
+
+    public string[] FxModeOptions { get; }
 
     /// <summary>"Omega" — the product wordmark (plain resw key, not the x:Uid entry).</summary>
     public string AppName => Res.Get("AppName");
@@ -94,6 +114,21 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial int ThemeIndex { get; set; }
 
+    [ObservableProperty]
+    public partial int FxModeIndex { get; set; }
+
+    /// <summary>
+    /// The persisted Now Playing FX mode: one of <c>"Aurora"</c>,
+    /// <c>"Particles"</c>, <c>"Pulse"</c>, <c>"Off"</c> — "Aurora"
+    /// when unset or unrecognized. Static so the panel can read the
+    /// contract without resolving this view model.
+    /// </summary>
+    public static string ReadNowPlayingFxMode()
+    {
+        string mode = ReadSetting(NowPlayingFxModeKey, "Aurora");
+        return Array.IndexOf(FxModeValues, mode) >= 0 ? mode : "Aurora";
+    }
+
     /// <summary>The stored theme-mode value for the current <see cref="ThemeIndex"/>.</summary>
     public string ThemeMode => ThemeIndex switch
     {
@@ -114,6 +149,14 @@ public partial class SettingsViewModel : ObservableObject
     {
         WriteSetting(ThemeModeKey, ThemeMode);
         ThemeModeChanged?.Invoke(ThemeMode);
+    }
+
+    partial void OnFxModeIndexChanged(int value)
+    {
+        if (value >= 0 && value < FxModeValues.Length)
+        {
+            WriteSetting(NowPlayingFxModeKey, FxModeValues[value]);
+        }
     }
 
     private static string ReadSetting(string key, string fallback)

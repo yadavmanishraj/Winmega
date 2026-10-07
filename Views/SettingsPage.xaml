@@ -29,6 +29,10 @@
                                    Style="{ThemeResource BodyTextBlockStyle}"
                                    VerticalAlignment="Center" />
                     </StackPanel>
+                    <TextBlock x:Uid="NowPlayingFxLabel" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                    <RadioButtons ItemsSource="{x:Bind ViewModel.FxModeOptions}"
+                                  SelectedIndex="{x:Bind ViewModel.FxModeIndex, Mode=TwoWay}"
+                                  AutomationProperties.AutomationId="SettingsFxModeRadios" />
                 </StackPanel>
             </Border>
 
