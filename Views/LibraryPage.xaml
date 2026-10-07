@@ -1,13 +1,236 @@
 <Page
     x:Class="Omega.Views.LibraryPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Omega.ViewModels">
 
-    <!-- Phase 0/1 placeholder. The real Library (design §9.4) is all-local
-         (Microsoft.Data.Sqlite): Favourites / Downloads / History /
-         Playlists behind a SelectorBar. -->
-    <StackPanel Padding="24" Spacing="16">
-        <TextBlock x:Uid="LibraryTitle" Style="{ThemeResource TitleTextBlockStyle}" />
-        <TextBlock x:Uid="LibrarySubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
-    </StackPanel>
+    <!-- Library (design §9.4): all-local. SelectorBar sections
+         Favourites / Playlists / History / Downloads, each with a
+         count line and its own empty state. -->
+    <Page.Resources>
+        <DataTemplate x:Key="SongRowTemplate" x:DataType="vm:SongItemViewModel">
+            <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Image Source="{x:Bind Artwork}" Width="48" Height="48" Stretch="UniformToFill"
+                       AutomationProperties.AccessibilityView="Raw" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Artists}" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="{x:Bind DurationText}"
+                           Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                <Button Grid.Column="3" Width="44" Height="44" Padding="0"
+                        Background="Transparent" BorderThickness="0"
+                        Command="{x:Bind ToggleFavoriteCommand}"
+                        AutomationProperties.AutomationId="SongFavoriteButton"
+                        AutomationProperties.Name="{x:Bind FavoriteMenuText, Mode=OneWay}">
+                    <FontIcon Glyph="{x:Bind FavoriteGlyph, Mode=OneWay}" FontSize="18" />
+                </Button>
+                <Button Grid.Column="4" Width="44" Height="44" Padding="0"
+                        Background="Transparent" BorderThickness="0"
+                        AutomationProperties.AutomationId="SongMoreButton"
+                        AutomationProperties.Name="{x:Bind MoreActionsName}">
+                    <FontIcon Glyph="&#xE712;" FontSize="18" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem x:Uid="PlayMenuItem" Command="{x:Bind PlayCommand}"
+                                            AutomationProperties.AutomationId="SongPlayMenuItem" />
+                            <MenuFlyoutItem Text="{x:Bind FavoriteMenuText, Mode=OneWay}"
+                                            Command="{x:Bind ToggleFavoriteCommand}"
+                                            AutomationProperties.AutomationId="SongFavoriteMenuItem" />
+                            <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
+                                            IsEnabled="{x:Bind CanAddToPlaylist}"
+                                            AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
+                            <MenuFlyoutItem Text="{x:Bind RemoveMenuText}"
+                                            Command="{x:Bind RemoveCommand}"
+                                            Visibility="{x:Bind CanRemove, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            AutomationProperties.AutomationId="SongRemoveMenuItem" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="PlaylistRowTemplate" x:DataType="vm:PlaylistItemViewModel">
+            <StackPanel Spacing="2" Padding="4,6">
+                <TextBlock Text="{x:Bind Name}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{x:Bind SongCountText}" Style="{ThemeResource CaptionTextBlockStyle}"
+                           Opacity="0.75" />
+                <TextBlock Text="{x:Bind UpdatedText}" Style="{ThemeResource CaptionTextBlockStyle}"
+                           Opacity="0.75" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="DownloadRowTemplate" x:DataType="vm:DownloadItemViewModel">
+            <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Image Source="{x:Bind Artwork}" Width="48" Height="48" Stretch="UniformToFill"
+                       AutomationProperties.AccessibilityView="Raw" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Artists}" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind StatusText}" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.75" />
+                    <ProgressBar Value="{x:Bind ProgressValue}" Maximum="100" Width="200"
+                                 HorizontalAlignment="Left"
+                                 Visibility="{x:Bind IsDownloading, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <TextBlock Text="{x:Bind ProgressText}" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Visibility="{x:Bind IsDownloading, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <TextBlock Text="{x:Bind ErrorText}" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                               TextWrapping="Wrap"
+                               Visibility="{x:Bind HasErrorText, Converter={StaticResource BoolToVisibilityConverter}}" />
+                </StackPanel>
+                <Button Grid.Column="2" Width="44" Height="44" Padding="0"
+                        Background="Transparent" BorderThickness="0"
+                        Command="{x:Bind DeleteCommand}"
+                        VerticalAlignment="Center"
+                        AutomationProperties.AutomationId="DownloadDeleteButton"
+                        AutomationProperties.Name="{x:Bind DeleteName}">
+                    <FontIcon Glyph="&#xE74D;" FontSize="18" />
+                </Button>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+
+    <ScrollViewer>
+        <StackPanel Padding="24,24,24,96" Spacing="16">
+            <TextBlock x:Uid="LibraryTitle" Style="{ThemeResource TitleTextBlockStyle}" />
+            <TextBlock x:Uid="LibrarySubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
+
+            <SelectorBar x:Name="LibraryTabs"
+                         AutomationProperties.AutomationId="LibraryTabs"
+                         SelectionChanged="LibraryTabs_SelectionChanged">
+                <SelectorBarItem x:Name="TabFavorites" x:Uid="LibraryTabFavorites" IsSelected="True"
+                                 AutomationProperties.AutomationId="LibraryTabFavorites" />
+                <SelectorBarItem x:Name="TabPlaylists" x:Uid="LibraryTabPlaylists"
+                                 AutomationProperties.AutomationId="LibraryTabPlaylists" />
+                <SelectorBarItem x:Name="TabHistory" x:Uid="LibraryTabHistory"
+                                 AutomationProperties.AutomationId="LibraryTabHistory" />
+                <SelectorBarItem x:Name="TabDownloads" x:Uid="LibraryTabDownloads"
+                                 AutomationProperties.AutomationId="LibraryTabDownloads" />
+            </SelectorBar>
+
+            <!-- Loading / error -->
+            <StackPanel Orientation="Horizontal" Spacing="8"
+                        Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Width="20" Height="20" />
+                <TextBlock x:Uid="LoadingText" Style="{ThemeResource BodyTextBlockStyle}" VerticalAlignment="Center" />
+            </StackPanel>
+            <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                     Severity="Error"
+                     x:Uid="ErrorInfoBar"
+                     Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                     AutomationProperties.AutomationId="LibraryError">
+                <InfoBar.ActionButton>
+                    <Button x:Uid="RetryButton" Command="{x:Bind ViewModel.RefreshCommand}"
+                            AutomationProperties.AutomationId="LibraryRetry" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+
+            <!-- Favorites -->
+            <StackPanel x:Name="FavoritesPanel" Spacing="8">
+                <TextBlock Text="{x:Bind ViewModel.FavoritesCountText, Mode=OneWay}"
+                           Style="{ThemeResource CaptionTextBlockStyle}" Opacity="0.75" />
+                <TextBlock x:Uid="FavoritesEmpty" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.75"
+                           Visibility="{x:Bind ViewModel.HasFavorites, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                <ListView ItemsSource="{x:Bind ViewModel.Favorites, Mode=OneWay}"
+                          ItemTemplate="{StaticResource SongRowTemplate}"
+                          SelectionMode="None"
+                          AutomationProperties.AutomationId="LibraryFavoritesList" />
+            </StackPanel>
+
+            <!-- Playlists -->
+            <StackPanel x:Name="PlaylistsPanel" Spacing="12" Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="{x:Bind ViewModel.PlaylistsCountText, Mode=OneWay}"
+                               Style="{ThemeResource CaptionTextBlockStyle}" Opacity="0.75"
+                               VerticalAlignment="Center" />
+                    <Button x:Uid="CreatePlaylistButton" Click="CreatePlaylist_Click"
+                            MinHeight="44"
+                            AutomationProperties.AutomationId="LibraryCreatePlaylist" />
+                </StackPanel>
+                <TextBlock x:Uid="PlaylistsEmpty" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.75"
+                           Visibility="{x:Bind ViewModel.HasPlaylists, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="280" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ListView Grid.Column="0"
+                              ItemsSource="{x:Bind ViewModel.Playlists, Mode=OneWay}"
+                              ItemTemplate="{StaticResource PlaylistRowTemplate}"
+                              SelectedItem="{x:Bind ViewModel.SelectedPlaylist, Mode=TwoWay}"
+                              SelectionMode="Single"
+                              AutomationProperties.AutomationId="LibraryPlaylistsList" />
+                    <StackPanel Grid.Column="1" Spacing="8"
+                                Visibility="{x:Bind ViewModel.HasSelectedPlaylist, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="{x:Bind ViewModel.SelectedPlaylist.Name, Mode=OneWay}"
+                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Uid="PlayAllButton" Command="{x:Bind ViewModel.PlaySelectedPlaylistCommand}"
+                                    Style="{ThemeResource AccentButtonStyle}" MinHeight="44"
+                                    AutomationProperties.AutomationId="LibraryPlaylistPlayAll" />
+                            <Button x:Uid="RenamePlaylistButton" Click="RenamePlaylist_Click"
+                                    MinHeight="44"
+                                    AutomationProperties.AutomationId="LibraryPlaylistRename" />
+                            <Button x:Uid="DeletePlaylistButton" Click="DeletePlaylist_Click"
+                                    MinHeight="44"
+                                    AutomationProperties.AutomationId="LibraryPlaylistDelete" />
+                        </StackPanel>
+                        <ListView ItemsSource="{x:Bind ViewModel.PlaylistSongs, Mode=OneWay}"
+                                  ItemTemplate="{StaticResource SongRowTemplate}"
+                                  SelectionMode="None"
+                                  AutomationProperties.AutomationId="LibraryPlaylistSongsList" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+
+            <!-- History -->
+            <StackPanel x:Name="HistoryPanel" Spacing="8" Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="{x:Bind ViewModel.HistoryCountText, Mode=OneWay}"
+                               Style="{ThemeResource CaptionTextBlockStyle}" Opacity="0.75"
+                               VerticalAlignment="Center" />
+                    <Button x:Uid="ClearHistoryButton" Click="ClearHistory_Click"
+                            MinHeight="44"
+                            AutomationProperties.AutomationId="LibraryClearHistory" />
+                </StackPanel>
+                <TextBlock x:Uid="HistoryEmpty" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.75"
+                           Visibility="{x:Bind ViewModel.HasHistory, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                <ListView ItemsSource="{x:Bind ViewModel.History, Mode=OneWay}"
+                          ItemTemplate="{StaticResource SongRowTemplate}"
+                          SelectionMode="None"
+                          AutomationProperties.AutomationId="LibraryHistoryList" />
+            </StackPanel>
+
+            <!-- Downloads -->
+            <StackPanel x:Name="DownloadsPanel" Spacing="8" Visibility="Collapsed">
+                <TextBlock Text="{x:Bind ViewModel.DownloadsCountText, Mode=OneWay}"
+                           Style="{ThemeResource CaptionTextBlockStyle}" Opacity="0.75" />
+                <TextBlock x:Uid="DownloadsEmpty" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.75"
+                           Visibility="{x:Bind ViewModel.HasDownloads, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                <ListView ItemsSource="{x:Bind ViewModel.Downloads, Mode=OneWay}"
+                          ItemTemplate="{StaticResource DownloadRowTemplate}"
+                          SelectionMode="None"
+                          AutomationProperties.AutomationId="LibraryDownloadsList" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
 </Page>

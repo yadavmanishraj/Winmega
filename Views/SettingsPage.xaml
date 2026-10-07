@@ -3,22 +3,74 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Phase 0/1 placeholder. The real Settings (design §9.6) groups
-         Appearance / Playback / Downloads / Advanced (endpoint override)
-         / About in SettingsCard-style rows. -->
-    <StackPanel Padding="24" Spacing="16">
-        <TextBlock x:Uid="SettingsTitle" Style="{ThemeResource TitleTextBlockStyle}" />
-        <TextBlock x:Uid="SettingsSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
-        <StackPanel Orientation="Horizontal" Spacing="12">
-            <Border Width="48" Height="48" CornerRadius="8"
-                    Background="{ThemeResource AccentFillColorDefaultBrush}" />
-            <TextBlock x:Uid="AccentSwatchLabel"
-                       Style="{ThemeResource BodyTextBlockStyle}"
-                       VerticalAlignment="Center" />
+    <!-- Settings (design §9.6): grouped card rows, persisted
+         immediately. Card surfaces use the Fluent card theme brushes
+         and the standard 8px card radius; theme switch applies to
+         the root element via App.ApplyThemeMode. -->
+    <ScrollViewer>
+        <StackPanel Padding="24,24,24,96" Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
+            <TextBlock x:Uid="SettingsTitle" Style="{ThemeResource TitleTextBlockStyle}" />
+            <TextBlock x:Uid="SettingsSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
+
+            <!-- Appearance -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock x:Uid="AppearanceHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                    <TextBlock x:Uid="ThemeLabel" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                    <RadioButtons ItemsSource="{x:Bind ViewModel.ThemeOptions}"
+                                  SelectedIndex="{x:Bind ViewModel.ThemeIndex, Mode=TwoWay}"
+                                  AutomationProperties.AutomationId="SettingsThemeRadios" />
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="48" Height="48" CornerRadius="8"
+                                Background="{ThemeResource AccentFillColorDefaultBrush}" />
+                        <TextBlock x:Uid="AccentSwatchLabel"
+                                   Style="{ThemeResource BodyTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Playback -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock x:Uid="PlaybackHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                    <TextBlock x:Uid="QualityLabel" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                    <ComboBox ItemsSource="{x:Bind ViewModel.QualityOptions}"
+                              SelectedIndex="{x:Bind ViewModel.SelectedQualityIndex, Mode=TwoWay}"
+                              MinWidth="280" HorizontalAlignment="Left"
+                              AutomationProperties.AutomationId="SettingsQualityCombo" />
+                    <TextBlock x:Uid="QualityNote" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.75" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock x:Uid="SettingsEndpointNote"
+                       Style="{ThemeResource CaptionTextBlockStyle}"
+                       Opacity="0.75"
+                       TextWrapping="Wrap" />
+
+            <!-- About -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16">
+                <StackPanel Spacing="8">
+                    <TextBlock x:Uid="AboutHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                    <TextBlock Text="{x:Bind ViewModel.AppName}"
+                               Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock x:Uid="VersionLabel" Style="{ThemeResource BodyTextBlockStyle}" />
+                        <TextBlock Text="{x:Bind ViewModel.VersionText}"
+                                   Style="{ThemeResource BodyTextBlockStyle}"
+                                   AutomationProperties.AutomationId="SettingsVersion" />
+                    </StackPanel>
+                    <TextBlock x:Uid="AboutBody" Style="{ThemeResource BodyTextBlockStyle}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
         </StackPanel>
-        <TextBlock x:Uid="SettingsEndpointNote"
-                   Style="{ThemeResource CaptionTextBlockStyle}"
-                   Opacity="0.75"
-                   TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left" />
-    </StackPanel>
+    </ScrollViewer>
 </Page>
