@@ -14,6 +14,44 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="SystemAccentColor">#3BE477</Color>
+                    <Color x:Key="SystemAccentColorLight1">#65E995</Color>
+                    <Color x:Key="SystemAccentColorLight2">#8FF0B0</Color>
+                    <Color x:Key="SystemAccentColorLight3">#C4F9D8</Color>
+                    <Color x:Key="SystemAccentColorDark1">#2FBC5E</Color>
+                    <Color x:Key="SystemAccentColorDark2">#249A4B</Color>
+                    <Color x:Key="SystemAccentColorDark3">#1B7539</Color>
+                    <!-- Purpose-named brushes (never named by hue). -->
+                    <SolidColorBrush x:Key="HeroSurfaceBrush" Color="#12122B" />
+                    <SolidColorBrush x:Key="HeroTintBrush" Color="#1E1B4B" />
+                    <!-- Transport on-state glyph (shuffle/repeat in the
+                         shell strip): the accent itself, spent on state
+                         only (APPLE_LAYOUT_SPEC §0/§3.3). -->
+                    <SolidColorBrush x:Key="TransportActiveBrush" Color="#3BE477" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="SystemAccentColor">#2DBE62</Color>
+                    <Color x:Key="SystemAccentColorLight1">#3BE477</Color>
+                    <Color x:Key="SystemAccentColorLight2">#7FECA6</Color>
+                    <Color x:Key="SystemAccentColorLight3">#C4F9D8</Color>
+                    <Color x:Key="SystemAccentColorDark1">#1FA855</Color>
+                    <Color x:Key="SystemAccentColorDark2">#178541</Color>
+                    <Color x:Key="SystemAccentColorDark3">#106332</Color>
+                    <SolidColorBrush x:Key="HeroSurfaceBrush" Color="#ECECF7" />
+                    <SolidColorBrush x:Key="HeroTintBrush" Color="#D9D4F5" />
+                    <SolidColorBrush x:Key="TransportActiveBrush" Color="#2DBE62" />
+                </ResourceDictionary>
+                <!-- HighContrast: intentionally empty for now (design
+                     §10) — the platform's SystemColor* brushes already
+                     carry the built-in controls, and the custom brushes
+                     above fall back to the active Light/Dark values. If
+                     HC-specific overrides are ever added here, they must
+                     be SystemColor*Brush resources only, no opacity. -->
+                <ResourceDictionary x:Key="HighContrast" />
+            </ResourceDictionary.ThemeDictionaries>
+
             <!-- ============ Shared design system (AUDIT_2 §8) ========
                  One definition per component, consumed by every page.
                  Radius intent is named once here (Card = 8, Hero = 16);
@@ -234,43 +272,27 @@
                  app-wide — the on-pattern way first-party apps
                  differentiate — while Mica supplies the window backdrop.
                  HighContrast contains ONLY SystemColor* resources. -->
-            <ResourceDictionary.ThemeDictionaries>
-                <ResourceDictionary x:Key="Dark">
-                    <Color x:Key="SystemAccentColor">#3BE477</Color>
-                    <Color x:Key="SystemAccentColorLight1">#65E995</Color>
-                    <Color x:Key="SystemAccentColorLight2">#8FF0B0</Color>
-                    <Color x:Key="SystemAccentColorLight3">#C4F9D8</Color>
-                    <Color x:Key="SystemAccentColorDark1">#2FBC5E</Color>
-                    <Color x:Key="SystemAccentColorDark2">#249A4B</Color>
-                    <Color x:Key="SystemAccentColorDark3">#1B7539</Color>
-                    <!-- Purpose-named brushes (never named by hue). -->
-                    <SolidColorBrush x:Key="HeroSurfaceBrush" Color="#12122B" />
-                    <SolidColorBrush x:Key="HeroTintBrush" Color="#1E1B4B" />
-                    <!-- Transport on-state glyph (shuffle/repeat in the
-                         shell strip): the accent itself, spent on state
-                         only (APPLE_LAYOUT_SPEC §0/§3.3). -->
-                    <SolidColorBrush x:Key="TransportActiveBrush" Color="#3BE477" />
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="Light">
-                    <Color x:Key="SystemAccentColor">#2DBE62</Color>
-                    <Color x:Key="SystemAccentColorLight1">#3BE477</Color>
-                    <Color x:Key="SystemAccentColorLight2">#7FECA6</Color>
-                    <Color x:Key="SystemAccentColorLight3">#C4F9D8</Color>
-                    <Color x:Key="SystemAccentColorDark1">#1FA855</Color>
-                    <Color x:Key="SystemAccentColorDark2">#178541</Color>
-                    <Color x:Key="SystemAccentColorDark3">#106332</Color>
-                    <SolidColorBrush x:Key="HeroSurfaceBrush" Color="#ECECF7" />
-                    <SolidColorBrush x:Key="HeroTintBrush" Color="#D9D4F5" />
-                    <SolidColorBrush x:Key="TransportActiveBrush" Color="#2DBE62" />
-                </ResourceDictionary>
-                <!-- HighContrast: intentionally empty for now (design
-                     §10) — the platform's SystemColor* brushes already
-                     carry the built-in controls, and the custom brushes
-                     above fall back to the active Light/Dark values. If
-                     HC-specific overrides are ever added here, they must
-                     be SystemColor*Brush resources only, no opacity. -->
-                <ResourceDictionary x:Key="HighContrast" />
-            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- Strip transport (shell): the 40px disc language the
+                 Now Playing page speaks at 48px (AUDIT_2 V-02/03). -->
+        <Style x:Key="StripTransportButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="StripTransportToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

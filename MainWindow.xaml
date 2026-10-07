@@ -16,26 +16,6 @@
          hover/pressed states have a surface. On-state adds shape —
          a filled disc + a dot under the glyph (code-behind) — never
          colour alone (A-4). -->
-    <Window.Resources>
-        <Style x:Key="StripTransportButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="40" />
-            <Setter Property="Height" Value="40" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="CornerRadius" Value="20" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-        <Style x:Key="StripTransportToggleStyle" TargetType="ToggleButton">
-            <Setter Property="Width" Value="40" />
-            <Setter Property="Height" Value="40" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="CornerRadius" Value="20" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-    </Window.Resources>
 
     <!-- Shell (APPLE_LAYOUT_SPEC §1, supersedes design §9.1's
          SelectorBar strip + floating bar): a unified 64px title-bar
@@ -136,7 +116,7 @@
                                   AutomationProperties.Name="Shuffle off">
                         <Grid>
                             <Ellipse x:Name="ShuffleDisc" Width="40" Height="40" />
-                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" FontSize="20" />
+                            <SymbolIcon x:Name="ShuffleIcon" Symbol="Shuffle" Width="20" Height="20" />
                             <Ellipse x:Name="ShuffleStateDot" Width="4" Height="4"
                                      HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                      Margin="0,0,0,4" Visibility="Collapsed"
@@ -148,7 +128,7 @@
                             ToolTipService.ToolTip="Previous"
                             AutomationProperties.AutomationId="TransportPrevious"
                             AutomationProperties.Name="Previous">
-                        <SymbolIcon Symbol="Previous" FontSize="20"
+                        <SymbolIcon Symbol="Previous" Width="20" Height="20"
                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                     </Button>
                     <Button Style="{StaticResource StripTransportButtonStyle}"
@@ -158,7 +138,7 @@
                             ToolTipService.ToolTip="Play or pause"
                             AutomationProperties.AutomationId="NowPlayingPlayPause"
                             AutomationProperties.Name="Play or pause">
-                        <SymbolIcon Symbol="{x:Bind Player.PlayPauseSymbol, Mode=OneWay}" FontSize="20"
+                        <SymbolIcon Symbol="{x:Bind Player.PlayPauseSymbol, Mode=OneWay}" Width="20" Height="20"
                                     Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
                     </Button>
                     <Button Style="{StaticResource StripTransportButtonStyle}"
@@ -166,7 +146,7 @@
                             ToolTipService.ToolTip="Next"
                             AutomationProperties.AutomationId="TransportNext"
                             AutomationProperties.Name="Next">
-                        <SymbolIcon Symbol="Next" FontSize="20"
+                        <SymbolIcon Symbol="Next" Width="20" Height="20"
                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                     </Button>
                     <Button x:Name="RepeatButton"
@@ -177,7 +157,7 @@
                             AutomationProperties.Name="Repeat off">
                         <Grid>
                             <Ellipse x:Name="RepeatDisc" Width="40" Height="40" />
-                            <SymbolIcon x:Name="RepeatIcon" FontSize="20"
+                            <SymbolIcon x:Name="RepeatIcon" Width="20" Height="20"
                                         Symbol="{x:Bind Player.RepeatSymbol, Mode=OneWay}" />
                             <Ellipse x:Name="RepeatStateDot" Width="4" Height="4"
                                      HorizontalAlignment="Center" VerticalAlignment="Bottom"
