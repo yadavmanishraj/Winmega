@@ -52,9 +52,11 @@ public sealed partial class MainWindow : Window
         AppWindow.TitleBar.ButtonBackgroundColor = Microsoft.UI.Colors.Transparent;
         AppWindow.TitleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
 
-        // Sized deliberately (WinUI has no SizeToContent): 1400x900 —
-        // the Apple silhouette (260 pane + LCD strip) wants the width.
-        AppWindow.Resize(new SizeInt32(1400, 900));
+        // Default size 1400x900 DIP is applied in TitleBarStrip_Loaded:
+        // AppWindow.Resize takes PHYSICAL pixels, so the DIP size must
+        // be scaled by RasterizationScale (only valid once the tree is
+        // live). Resizing unscaled here would halve the layout space
+        // on a 200%-scaled display and push the LCD well offscreen.
 
         ViewModel.Playlists.CollectionChanged += OnPlaylistsChanged;
         Player.PropertyChanged += OnPlayerPropertyChanged;
@@ -77,6 +79,8 @@ public sealed partial class MainWindow : Window
     // Title bar
     // ------------------------------------------------------------------
 
+    private bool _initialSizeApplied;
+
     private void TitleBarStrip_Loaded(object sender, RoutedEventArgs e)
     {
         // RightInset is physical pixels; the spacer is in DIPs.
@@ -84,6 +88,17 @@ public sealed partial class MainWindow : Window
         if (scale <= 0)
         {
             scale = 1;
+        }
+
+        // One-time default size: 1400x900 DIP (the Apple silhouette —
+        // 260 pane + LCD strip — wants the width), converted to the
+        // physical pixels AppWindow.Resize expects.
+        if (!_initialSizeApplied)
+        {
+            _initialSizeApplied = true;
+            AppWindow.Resize(new SizeInt32(
+                (int)Math.Round(1400 * scale),
+                (int)Math.Round(900 * scale)));
         }
 
         CaptionInsetSpacer.Width = AppWindow.TitleBar.RightInset / scale;
