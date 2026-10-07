@@ -16,6 +16,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
+using Omega.Controls;
 using Omega.Core.Models;
 using Omega.Core.Persistence;
 using Omega.Core.Upstream;
@@ -24,6 +25,8 @@ using Omega.ViewModels;
 using Omega.Views;
 using Windows.Foundation;
 using Windows.Graphics;
+using Windows.Storage;
+using Windows.System;
 
 namespace Omega;
 
@@ -31,10 +34,12 @@ namespace Omega;
 /// Shell window (APPLE_LAYOUT_SPEC §1; supersedes design §9.1's
 /// SelectorBar strip + floating bar): unified title-bar strip
 /// (transport + LCD well) over a NavigationView sidebar, content in
-/// <c>ContentFrame</c>. Transport and the LCD bind
-/// <see cref="PlayerViewModel"/> — the same VM the Now Playing page
-/// uses — while <see cref="ShellViewModel"/> carries sidebar state.
-/// Code-behind does navigation/event wiring only — no business logic.
+/// <c>ContentFrame</c>, and the Now Playing panel docked beside it.
+/// Transport and the LCD bind <see cref="PlayerViewModel"/> — the
+/// same VM family the Now Playing panel uses (its own transient
+/// instance) — while <see cref="ShellViewModel"/> carries sidebar
+/// state. Code-behind does navigation/event wiring only — no
+/// business logic.
 ///
 /// Navigation model (audit fix wave): sidebar destinations are
 /// handled on <c>ItemInvoked</c>, not <c>SelectionChanged</c> — an
@@ -61,6 +66,22 @@ public sealed partial class MainWindow : Window
     private bool _lyricsFlyoutOpen;
     private CancellationTokenSource? _lyricsFlyoutCts;
     private string? _lyricsFlyoutSongId;
+
+    // Now Playing panel (docked pane): created fresh on every open,
+    // disposed after the close slide. The shell owns its width —
+    // the persisted user choice (_panelRequestedWidth), the
+    // 288-520 clamp, the narrow-window full-width rule, and the
+    // slide animation (_panelTargetWidth is the last width the
+    // shell committed to, animated or direct).
+    private const string PanelWidthKey = "NowPlayingPanelWidth";
+    private const double PanelDefaultWidth = 344;
+    private const double PanelMinWidth = 288;
+    private const double PanelMaxWidth = 520;
+    private NowPlayingPanel? _nowPlayingPanel;
+    private Storyboard? _panelStoryboard;
+    private double _panelRequestedWidth = PanelDefaultWidth;
+    private double _panelTargetWidth;
+    private object? _navSelectionBeforePanel;
 
     public MainWindow()
     {
@@ -107,6 +128,8 @@ public sealed partial class MainWindow : Window
         // be scaled by RasterizationScale (only valid once the tree is
         // live). Resizing unscaled here would halve the layout space
         // on a 200%-scaled display and push the LCD well offscreen.
+
+        _panelRequestedWidth = ReadPanelWidth();
 
         ContentFrame.NavigationFailed += ContentFrame_NavigationFailed;
         ViewModel.Playlists.CollectionChanged += OnPlaylistsChanged;
@@ -258,8 +281,8 @@ public sealed partial class MainWindow : Window
     /// Responsive fold-down (AUDIT_2 R-1/R-2): below ~1100 DIP the
     /// strip's fixed cost would crush the LCD well, so the volume
     /// slider folds away (the speaker button — a mute toggle —
-    /// remains, and volume stays reachable on the Now Playing page's
-    /// surface and via keyboard focus on the button). Below the
+    /// remains, and volume stays reachable on the Now Playing
+    /// panel's surface and via keyboard focus on the button). Below the
     /// NavigationView's own compact tier (1008) the pane toggle
     /// appears: PaneDisplayMode=Auto already collapses the pane to
     /// icons and then to an overlay, but without a toggle button the
@@ -271,6 +294,33 @@ public sealed partial class MainWindow : Window
             ? Visibility.Collapsed
             : Visibility.Visible;
         ShellNav.IsPaneToggleButtonVisible = e.NewSize.Width < 1008;
+
+        // The docked panel's effective width depends on the window
+        // width (narrow-window rule), so a resize re-applies it —
+        // unless a slide is mid-flight, whose target the completion
+        // handler has already committed from the same rule.
+        if (_nowPlayingPanel is not null && _panelStoryboard is null)
+        {
+            _panelTargetWidth = EffectivePanelWidth();
+            _nowPlayingPanel.Width = _panelTargetWidth;
+        }
+    }
+
+    /// <summary>
+    /// Esc closes the Now Playing panel — and only the panel. The
+    /// handler sits on the root grid's bubble route and acts solely
+    /// on events nobody else consumed: flyouts and dialogs live in
+    /// popup trees (their Esc never reaches this route), and
+    /// controls that use Esc (the search box) mark it handled
+    /// first. Navigation and outside clicks never close the panel.
+    /// </summary>
+    private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == VirtualKey.Escape && !e.Handled && _nowPlayingPanel is not null)
+        {
+            CloseNowPlayingPanel();
+            e.Handled = true;
+        }
     }
 
     private void BackButton_Click(object sender, RoutedEventArgs e)
@@ -312,6 +362,21 @@ public sealed partial class MainWindow : Window
         NavigateByTag("settings");
     }
 
+    /// <summary>
+    /// Tracks the last REAL sidebar selection (any row except the
+    /// Now Playing action row). Opening the panel auto-selects its
+    /// row; the invoke handler restores the tracked selection so
+    /// the sidebar keeps naming the page actually on screen.
+    /// </summary>
+    private void ShellNav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    {
+        if (args.SelectedItem is not null
+            && !ReferenceEquals(args.SelectedItem, NavNowPlayingItem))
+        {
+            _navSelectionBeforePanel = args.SelectedItem;
+        }
+    }
+
     private void NavigateByTag(string tag)
     {
         // Static page switch — no reflection-based navigation (AOT rule).
@@ -319,6 +384,23 @@ public sealed partial class MainWindow : Window
         {
             case "home":
                 NavigateSection(typeof(HomePage), null);
+                break;
+            case "nowplaying":
+                // Not a page: open the docked panel and hand the
+                // sidebar selection back to the current section
+                // (deferred — the control finishes its own invoke
+                // processing, including the auto-select, first).
+                OpenNowPlayingPanel(null);
+                DispatcherQueue.TryEnqueue(
+                    Microsoft.UI.Dispatching.DispatcherPriority.Low,
+                    () =>
+                    {
+                        if (_navSelectionBeforePanel is not null
+                            && !ReferenceEquals(ShellNav.SelectedItem, _navSelectionBeforePanel))
+                        {
+                            ShellNav.SelectedItem = _navSelectionBeforePanel;
+                        }
+                    });
                 break;
             case "settings":
                 NavigateSection(typeof(SettingsPage), null);
@@ -421,7 +503,7 @@ public sealed partial class MainWindow : Window
             SyncLibrarySelection(e.Parameter);
         }
 
-        // Detail / Now Playing are pushes over the shell: the sidebar
+        // Detail pages are pushes over the shell: the sidebar
         // selection stays on the last top-level row (Apple's model).
     }
 
@@ -579,25 +661,306 @@ public sealed partial class MainWindow : Window
     // ------------------------------------------------------------------
 
     private void NowPlayingOpen_Click(object sender, RoutedEventArgs e) =>
-        NavigateToNowPlaying(null);
+        OpenNowPlayingPanel(null);
 
     private void OpenQueueMenuItem_Click(object sender, RoutedEventArgs e) =>
-        NavigateToNowPlaying("queue");
+        OpenNowPlayingPanel("queue");
+
+    // ------------------------------------------------------------------
+    // Now Playing panel (approved design, 2026-10-07): a shell-level
+    // DOCKED pane — real layout space in Row 2 beside the
+    // NavigationView, never an overlay. Open: a fresh
+    // NowPlayingPanel instance is created, added at width 0 and
+    // slid to its effective width (~320 ms decelerate). Close (the
+    // panel's own ✕ or Esc — nothing else): slid back to 0
+    // (~240 ms accelerate) and then DISPOSED (removed from the
+    // tree, subscriptions dropped), so every open starts from a
+    // clean instance. It stays docked across all frame navigation.
+    // ------------------------------------------------------------------
 
     /// <summary>
-    /// The well lands on the Now Playing page (design §9.5); the
-    /// section parameter tells the page which section the user asked
-    /// for — lyrics opens the lyrics panel, queue scrolls the queue
-    /// into view — instead of controls silently doing the identical
-    /// thing (AUDIT_1 B3). Since the strip's Lyrics/Queue buttons
-    /// became flyouts, this route is used by the LCD menu and by the
-    /// flyouts' footers.
+    /// Opens the panel (or, when it is already open, just applies
+    /// the requested segment). <paramref name="section"/> is the
+    /// route name the strip surfaces have always used: "queue" /
+    /// "lyrics" preselect that segment (AUDIT_1 B3 — controls must
+    /// not silently do the identical thing); null keeps the
+    /// default (Queue on a fresh panel, current segment on an
+    /// already-open one).
     /// </summary>
-    private void NavigateToNowPlaying(string? section)
+    private void OpenNowPlayingPanel(string? section)
     {
-        if (ContentFrame.CurrentSourcePageType != typeof(NowPlayingPage))
+        NowPlayingPanelSegment? segment = section switch
         {
-            ContentFrame.Navigate(typeof(NowPlayingPage), section);
+            "queue" => NowPlayingPanelSegment.Queue,
+            "lyrics" => NowPlayingPanelSegment.Lyrics,
+            _ => null,
+        };
+
+        if (_nowPlayingPanel is not null)
+        {
+            // Reopen racing a close slide: cancel the close and
+            // settle back at the open width instead of disposing a
+            // panel the user just asked for.
+            if (_panelStoryboard is not null && _panelTargetWidth == 0)
+            {
+                StopPanelStoryboard();
+                _panelTargetWidth = EffectivePanelWidth();
+                _nowPlayingPanel.Width = _panelTargetWidth;
+            }
+
+            if (segment is { } existing)
+            {
+                _nowPlayingPanel.ShowSegment(existing);
+            }
+
+            return;
+        }
+
+        var panel = new NowPlayingPanel();
+        _nowPlayingPanel = panel;
+        panel.CloseRequested += Panel_CloseRequested;
+        panel.ArtistSelected += Panel_ArtistSelected;
+        panel.ResizeDragStarted += Panel_ResizeDragStarted;
+        panel.ResizeRequested += Panel_ResizeRequested;
+        panel.ResizeDragEnded += Panel_ResizeDragEnded;
+        panel.ResizeResetRequested += Panel_ResizeResetRequested;
+        NowPlayingPanelHost.Children.Add(panel);
+
+        if (segment is { } requested)
+        {
+            panel.ShowSegment(requested);
+        }
+
+        panel.Width = 0;
+        _panelTargetWidth = EffectivePanelWidth();
+        AnimatePanelWidth(_panelTargetWidth, opening: true);
+    }
+
+    private void CloseNowPlayingPanel()
+    {
+        if (_nowPlayingPanel is null)
+        {
+            return;
+        }
+
+        _panelTargetWidth = 0;
+        AnimatePanelWidth(0, opening: false);
+    }
+
+    /// <summary>
+    /// The width the panel should occupy right now: the user's
+    /// persisted choice, except when the content left beside it
+    /// would drop below ~560 DIP — then the panel takes the full
+    /// content width instead of crushing the page (still docked
+    /// mechanics, just full-bleed).
+    /// </summary>
+    private double EffectivePanelWidth()
+    {
+        double available = RootGrid.ActualWidth;
+        if (available > 0 && available - _panelRequestedWidth < 560)
+        {
+            return available;
+        }
+
+        return _panelRequestedWidth;
+    }
+
+    /// <summary>
+    /// Slides the panel's width (a dependent animation — layout
+    /// must reflow every frame, which is the point of a docked
+    /// pane). Reduced-motion (system animations off) snaps instead.
+    /// On completion the width is committed as a plain local value
+    /// so later direct sets (drag, resize) start from solid ground;
+    /// a completed CLOSE disposes the panel.
+    /// </summary>
+    private void AnimatePanelWidth(double to, bool opening)
+    {
+        if (_nowPlayingPanel is null)
+        {
+            return;
+        }
+
+        StopPanelStoryboard();
+
+        if (!AnimationsEnabled())
+        {
+            _nowPlayingPanel.Width = to;
+            if (!opening)
+            {
+                DisposeNowPlayingPanel();
+            }
+
+            return;
+        }
+
+        var animation = new DoubleAnimation
+        {
+            From = _nowPlayingPanel.Width,
+            To = to,
+            Duration = new Duration(TimeSpan.FromMilliseconds(opening ? 320 : 240)),
+            EasingFunction = opening
+                ? new CubicEase { EasingMode = EasingMode.EaseOut }
+                : new CubicEase { EasingMode = EasingMode.EaseIn },
+            EnableDependentAnimation = true,
+        };
+        Storyboard.SetTarget(animation, _nowPlayingPanel);
+        Storyboard.SetTargetProperty(animation, "Width");
+
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(animation);
+        storyboard.Completed += (_, _) =>
+        {
+            if (!ReferenceEquals(_panelStoryboard, storyboard))
+            {
+                return;
+            }
+
+            _panelStoryboard = null;
+            if (_nowPlayingPanel is not null)
+            {
+                _nowPlayingPanel.Width = to;
+            }
+
+            if (!opening)
+            {
+                DisposeNowPlayingPanel();
+            }
+        };
+        _panelStoryboard = storyboard;
+        storyboard.Begin();
+    }
+
+    private void StopPanelStoryboard()
+    {
+        if (_panelStoryboard is not null)
+        {
+            _panelStoryboard.Stop();
+            _panelStoryboard = null;
+        }
+    }
+
+    /// <summary>
+    /// Removes the panel from the tree and tears it down. After
+    /// this, nothing of the panel survives — the next open builds
+    /// a fresh instance (fresh segment, fresh scroll, fresh VM).
+    /// </summary>
+    private void DisposeNowPlayingPanel()
+    {
+        if (_nowPlayingPanel is null)
+        {
+            return;
+        }
+
+        StopPanelStoryboard();
+        NowPlayingPanel panel = _nowPlayingPanel;
+        _nowPlayingPanel = null;
+        panel.CloseRequested -= Panel_CloseRequested;
+        panel.ArtistSelected -= Panel_ArtistSelected;
+        panel.ResizeDragStarted -= Panel_ResizeDragStarted;
+        panel.ResizeRequested -= Panel_ResizeRequested;
+        panel.ResizeDragEnded -= Panel_ResizeDragEnded;
+        panel.ResizeResetRequested -= Panel_ResizeResetRequested;
+        NowPlayingPanelHost.Children.Remove(panel);
+        panel.DisposePanel();
+    }
+
+    private void Panel_CloseRequested(object? sender, EventArgs e) =>
+        CloseNowPlayingPanel();
+
+    private void Panel_ArtistSelected(object? sender, string artistId)
+    {
+        // A drill-in push under the still-open panel (the same
+        // navigation the pages perform); the panel is shell-level
+        // and is not part of the frame's tree, so it stays docked.
+        ContentFrame.Navigate(typeof(DetailPage), DetailNavigationArgs.Artist(artistId));
+    }
+
+    private void Panel_ResizeDragStarted(object? sender, EventArgs e)
+    {
+        // A grab mid-slide: stop the animation and snap to the
+        // width it was heading for, so the drag starts from the
+        // settled geometry.
+        StopPanelStoryboard();
+        if (_nowPlayingPanel is not null)
+        {
+            _nowPlayingPanel.Width = _panelTargetWidth;
+        }
+    }
+
+    private void Panel_ResizeRequested(object? sender, double requested)
+    {
+        if (_nowPlayingPanel is null)
+        {
+            return;
+        }
+
+        // Direct set — no transition lag while dragging. The narrow
+        // -window rule can pin the effective width (full-bleed)
+        // even while the requested width keeps changing underneath.
+        _panelRequestedWidth = Math.Clamp(requested, PanelMinWidth, PanelMaxWidth);
+        _panelTargetWidth = EffectivePanelWidth();
+        _nowPlayingPanel.Width = _panelTargetWidth;
+    }
+
+    private void Panel_ResizeDragEnded(object? sender, EventArgs e) =>
+        WritePanelWidth(_panelRequestedWidth);
+
+    private void Panel_ResizeResetRequested(object? sender, EventArgs e)
+    {
+        if (_nowPlayingPanel is null)
+        {
+            return;
+        }
+
+        _panelRequestedWidth = PanelDefaultWidth;
+        _panelTargetWidth = EffectivePanelWidth();
+        _nowPlayingPanel.Width = _panelTargetWidth;
+        WritePanelWidth(_panelRequestedWidth);
+    }
+
+    private static bool AnimationsEnabled()
+    {
+        try
+        {
+            return new Windows.UI.ViewManagement.UISettings().AnimationsEnabled;
+        }
+        catch (Exception)
+        {
+            return true;
+        }
+    }
+
+    // Panel width persistence — the SettingsViewModel LocalSettings
+    // pattern (primitives, try/catch: unpackaged dev runs have no
+    // LocalSettings and simply don't persist).
+    private static double ReadPanelWidth()
+    {
+        try
+        {
+            if (ApplicationData.Current.LocalSettings.Values.TryGetValue(PanelWidthKey, out object? value)
+                && value is double width)
+            {
+                return Math.Clamp(width, PanelMinWidth, PanelMaxWidth);
+            }
+        }
+        catch (Exception)
+        {
+            // Fall through to the default.
+        }
+
+        return PanelDefaultWidth;
+    }
+
+    private static void WritePanelWidth(double width)
+    {
+        try
+        {
+            ApplicationData.Current.LocalSettings.Values[PanelWidthKey] = width;
+        }
+        catch (Exception)
+        {
+            // Unpackaged dev runs have no LocalSettings — the width
+            // simply doesn't persist there.
         }
     }
 
@@ -607,7 +970,7 @@ public sealed partial class MainWindow : Window
     // strip buttons; opening one is an outside click for the other,
     // so they never stack. Presentation state is synced in code
     // (the shell's pattern for its dynamic surfaces); the lyrics
-    // fetch mirrors the Now Playing page's — same Core call, same
+    // fetch mirrors the Now Playing panel's — same Core call, same
     // HasLyrics gate, same status wording — plus a per-song cache
     // so reopening is instant.
     // ------------------------------------------------------------------
@@ -680,7 +1043,7 @@ public sealed partial class MainWindow : Window
     {
         if (e.ClickedItem is QueueFlyoutItem item)
         {
-            // Same tap-to-jump the Now Playing page's queue uses;
+            // Same tap-to-jump the Now Playing panel's queue uses;
             // the flyout stays open and re-syncs onto the new
             // current track (StateChanged follows the jump).
             Player.PlayQueueItem(item.Song);
@@ -752,7 +1115,7 @@ public sealed partial class MainWindow : Window
     private void QueueOpenNowPlaying_Click(object sender, RoutedEventArgs e)
     {
         QueueFlyout.Hide();
-        NavigateToNowPlaying("queue");
+        OpenNowPlayingPanel("queue");
     }
 
     private void LyricsFlyout_Opening(object sender, object e)
@@ -773,7 +1136,7 @@ public sealed partial class MainWindow : Window
     private void LyricsOpenNowPlaying_Click(object sender, RoutedEventArgs e)
     {
         LyricsFlyout.Hide();
-        NavigateToNowPlaying("lyrics");
+        OpenNowPlayingPanel("lyrics");
     }
 
     private enum LyricsFlyoutState
@@ -786,7 +1149,7 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// Fetches the current song's lyrics for the flyout. Gated on
-    /// <see cref="Song.HasLyrics"/> like the Now Playing page (the
+    /// <see cref="Song.HasLyrics"/> like the Now Playing panel (the
     /// search payload's flag is the accurate one). Results cache per
     /// song id — including the "upstream has none" answer — so
     /// reopening the flyout is instant; a track change while the

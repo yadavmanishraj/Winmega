@@ -1,0 +1,422 @@
+<UserControl
+    x:Class="Omega.Controls.NowPlayingPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:Omega.Core.Models"
+    SizeChanged="NowPlayingPanel_SizeChanged">
+
+    <!-- THE Now Playing surface (approved panel design, 2026-10-07;
+         replaces the retired full-page player). A shell-docked pane,
+         NOT an overlay: MainWindow hosts it in a real layout column
+         beside the NavigationView and animates its Width 0<->W, so
+         the content column narrows and reflows while the panel is
+         open. The shell creates a FRESH instance on every open and
+         disposes it after the close slide, so nothing stale survives
+         inside (segment resets to Queue, scrolls at top).
+
+         Everything the page did lives here (feature parity):
+         sleep-timer chip, playback failure bar, artwork, seek with
+         the drag guard, the shared transport row, speed + sleep
+         menus, the queue (tap-to-jump, drag-reorder, hover remove)
+         and lyrics (segment switch). Additions over the page: a
+         close button, a favourite heart for the current song, a
+         tappable artist byline, and the resize grip on the left
+         edge (drag = resize 288-520, double-click = reset; the
+         shell owns clamping + persistence).
+
+         Bindings are compiled {x:Bind} rooted at this control's own
+         PlayerViewModel instance (transient, disposed with the
+         panel — the page's lifecycle), never classic bindings and
+         never a dictionary-hosted template (the D1 rule). -->
+    <Grid Background="{ThemeResource LayerFillColorDefaultBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="8" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Resize grip: hit-testable strip on the panel's left
+             edge (transparent fill — a null background would not be
+             hit-testable). The 1px stroke line is centred in it. -->
+        <Border x:Name="GripBorder" Grid.Column="0"
+                Background="Transparent"
+                PointerPressed="Grip_PointerPressed"
+                PointerMoved="Grip_PointerMoved"
+                PointerReleased="Grip_PointerReleased"
+                PointerCanceled="Grip_PointerReleased"
+                DoubleTapped="Grip_DoubleTapped"
+                ToolTipService.ToolTip="Resize panel"
+                AutomationProperties.AutomationId="NowPlayingPanelGrip"
+                AutomationProperties.Name="Resize panel">
+            <Border Width="1" HorizontalAlignment="Center"
+                    Background="{ThemeResource CardStrokeColorDefaultBrush}" />
+        </Border>
+
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- ===== Hero zone: header, artwork, title ===== -->
+            <Border Grid.Row="0" Background="{ThemeResource HeroTintBrush}">
+                <Grid Margin="20,12,12,18">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Header: label, sleep chip, close. -->
+                    <Grid Grid.Row="0" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="PanelTitleText" Grid.Column="0"
+                                   Style="{ThemeResource CaptionTextBlockStyle}"
+                                   CharacterSpacing="80"
+                                   VerticalAlignment="Center" />
+                        <Border Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Padding="12,4"
+                                CornerRadius="{StaticResource CardCornerRadius}"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                Visibility="{x:Bind ViewModel.SleepTimerVisibility, Mode=OneWay}">
+                            <TextBlock Text="Sleep timer on"
+                                       Style="{ThemeResource CaptionTextBlockStyle}" />
+                        </Border>
+                        <Button Grid.Column="2"
+                                Width="36" Height="36" Padding="0"
+                                Background="Transparent" BorderThickness="0"
+                                Click="CloseButton_Click"
+                                ToolTipService.ToolTip="Close"
+                                AutomationProperties.AutomationId="NowPlayingPanelClose"
+                                AutomationProperties.Name="Close">
+                            <SymbolIcon Symbol="Cancel" Width="14" Height="14" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Artwork: square, sized in code-behind from
+                         the panel width. The art paints as the
+                         background of a rounded Border so it clips
+                         to the 12px radius exactly. -->
+                    <Grid x:Name="ArtworkHost" Grid.Row="1" Margin="0,10,8,0"
+                          HorizontalAlignment="Center">
+                        <Border x:Name="ArtworkPlaceholder" CornerRadius="12"
+                                Background="{ThemeResource LayerFillColorAltBrush}">
+                            <SymbolIcon Symbol="MusicInfo" Width="40" Height="40"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <Border CornerRadius="12">
+                            <Border.Background>
+                                <ImageBrush x:Name="ArtworkBrush" Stretch="UniformToFill" />
+                            </Border.Background>
+                        </Border>
+                    </Grid>
+
+                    <!-- Title + tappable byline + favourite. -->
+                    <Grid Grid.Row="2" Margin="0,14,8,0" ColumnSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="{x:Bind ViewModel.CurrentTitle, Mode=OneWay}"
+                                       Style="{ThemeResource SubtitleTextBlockStyle}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <StackPanel x:Name="BylinePanel" Orientation="Horizontal" />
+                        </StackPanel>
+                        <Button x:Name="FavoriteButton" Grid.Column="1"
+                                Width="40" Height="40" Padding="0"
+                                Background="Transparent" BorderThickness="0"
+                                VerticalAlignment="Top"
+                                Click="FavoriteButton_Click"
+                                AutomationProperties.AutomationId="NowPlayingFavorite">
+                            <FontIcon x:Name="FavoriteIcon" Glyph="&#xEB51;" FontSize="18" />
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- ===== Failure surface (the page's InfoBar, verbatim) ===== -->
+            <InfoBar Grid.Row="1" Margin="12,8,12,0"
+                     Title="Playback problem"
+                     Severity="Warning"
+                     IsOpen="{x:Bind ViewModel.HasPlaybackError, Mode=OneWay}"
+                     Message="{x:Bind ViewModel.PlaybackError, Mode=OneWay}"
+                     Closed="FailureBar_Closed"
+                     AutomationProperties.AutomationId="NowPlayingFailure">
+                <InfoBar.ActionButton>
+                    <Button Content="Next track"
+                            Click="FailureNext_Click"
+                            AutomationProperties.AutomationId="NowPlayingFailureNext"
+                            AutomationProperties.Name="Next track" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+
+            <!-- ===== Seek + transport + secondary ===== -->
+            <StackPanel Grid.Row="2" Margin="20,16,20,0" Spacing="10">
+                <!-- Seek: labels use tabular numerals so the layout
+                     never jitters; the slider's Value is driven from
+                     code-behind with the page's drag guard. -->
+                <Grid ColumnSpacing="12" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{x:Bind ViewModel.PositionText, Mode=OneWay}"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Typography.NumeralAlignment="Tabular"
+                               VerticalAlignment="Center" />
+                    <Slider x:Name="SeekSlider"
+                            Grid.Column="1"
+                            Minimum="0"
+                            Maximum="{x:Bind ViewModel.DurationSeconds, Mode=OneWay}"
+                            StepFrequency="1"
+                            VerticalAlignment="Center"
+                            AutomationProperties.AutomationId="NowPlayingSeek"
+                            AutomationProperties.Name="Seek"
+                            PointerPressed="SeekSlider_PointerPressed"
+                            PointerReleased="SeekSlider_PointerReleased"
+                            ValueChanged="SeekSlider_ValueChanged" />
+                    <TextBlock Grid.Column="2"
+                               Text="{x:Bind ViewModel.DurationText, Mode=OneWay}"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Typography.NumeralAlignment="Tabular"
+                               VerticalAlignment="Center" />
+                </Grid>
+
+                <!-- Transport: the shared transport styles (App.xaml),
+                     the same discs the shell strip and the retired
+                     page use. -->
+                <StackPanel Orientation="Horizontal" Spacing="8"
+                            HorizontalAlignment="Center">
+                    <ToggleButton Style="{StaticResource TransportToggleButtonStyle}"
+                                  IsChecked="{x:Bind ViewModel.IsShuffle, Mode=TwoWay}"
+                                  ToolTipService.ToolTip="Shuffle"
+                                  AutomationProperties.AutomationId="NowPlayingShuffle"
+                                  AutomationProperties.Name="Shuffle">
+                        <SymbolIcon Symbol="Shuffle" />
+                    </ToggleButton>
+                    <Button Style="{StaticResource TransportButtonStyle}"
+                            Command="{x:Bind ViewModel.PreviousTrackCommand}"
+                            ToolTipService.ToolTip="Previous"
+                            AutomationProperties.AutomationId="NowPlayingPrevious"
+                            AutomationProperties.Name="Previous track">
+                        <SymbolIcon Symbol="Previous" />
+                    </Button>
+                    <Button Style="{StaticResource TransportPrimaryButtonStyle}"
+                            Command="{x:Bind ViewModel.TogglePlayPauseCommand}"
+                            ToolTipService.ToolTip="Play or pause"
+                            AutomationProperties.AutomationId="NowPlayingPanelPlayPause"
+                            AutomationProperties.Name="Play or pause">
+                        <SymbolIcon Symbol="{x:Bind ViewModel.PlayPauseSymbol, Mode=OneWay}" Width="24" Height="24" />
+                    </Button>
+                    <Button Style="{StaticResource TransportButtonStyle}"
+                            Command="{x:Bind ViewModel.NextTrackCommand}"
+                            ToolTipService.ToolTip="Next"
+                            AutomationProperties.AutomationId="NowPlayingNext"
+                            AutomationProperties.Name="Next track">
+                        <SymbolIcon Symbol="Next" />
+                    </Button>
+                    <Button x:Name="RepeatButton"
+                            Style="{StaticResource TransportButtonStyle}"
+                            Click="RepeatButton_Click"
+                            AutomationProperties.AutomationId="NowPlayingRepeat"
+                            AutomationProperties.Name="Repeat">
+                        <SymbolIcon x:Name="RepeatIcon" Symbol="RepeatAll" />
+                    </Button>
+                </StackPanel>
+
+                <!-- Secondary: playback speed + sleep timer (the
+                     page's menus, verbatim; the page's third control,
+                     the lyrics toggle, is the segment switch below). -->
+                <StackPanel Orientation="Horizontal" Spacing="8"
+                            HorizontalAlignment="Center">
+                    <DropDownButton Content="Speed"
+                                    AutomationProperties.AutomationId="NowPlayingSpeed"
+                                    AutomationProperties.Name="Playback speed">
+                        <DropDownButton.Flyout>
+                            <MenuFlyout>
+                                <RadioMenuFlyoutItem Text="0.5×" Tag="0.5" GroupName="PlaybackSpeed"
+                                                     Click="SpeedItem_Click"
+                                                     AutomationProperties.AutomationId="Speed0_5" />
+                                <RadioMenuFlyoutItem Text="0.75×" Tag="0.75" GroupName="PlaybackSpeed"
+                                                     Click="SpeedItem_Click"
+                                                     AutomationProperties.AutomationId="Speed0_75" />
+                                <RadioMenuFlyoutItem Text="1.0×" Tag="1" GroupName="PlaybackSpeed" IsChecked="True"
+                                                     Click="SpeedItem_Click"
+                                                     AutomationProperties.AutomationId="Speed1_0" />
+                                <RadioMenuFlyoutItem Text="1.25×" Tag="1.25" GroupName="PlaybackSpeed"
+                                                     Click="SpeedItem_Click"
+                                                     AutomationProperties.AutomationId="Speed1_25" />
+                                <RadioMenuFlyoutItem Text="1.5×" Tag="1.5" GroupName="PlaybackSpeed"
+                                                     Click="SpeedItem_Click"
+                                                     AutomationProperties.AutomationId="Speed1_5" />
+                                <RadioMenuFlyoutItem Text="2.0×" Tag="2" GroupName="PlaybackSpeed"
+                                                     Click="SpeedItem_Click"
+                                                     AutomationProperties.AutomationId="Speed2_0" />
+                            </MenuFlyout>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
+                    <DropDownButton Content="Sleep timer"
+                                    AutomationProperties.AutomationId="NowPlayingSleepTimer"
+                                    AutomationProperties.Name="Sleep timer">
+                        <DropDownButton.Flyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Off" Tag="0"
+                                                Click="SleepItem_Click"
+                                                AutomationProperties.AutomationId="SleepOff" />
+                                <MenuFlyoutItem Text="5 minutes" Tag="5"
+                                                Click="SleepItem_Click"
+                                                AutomationProperties.AutomationId="Sleep5" />
+                                <MenuFlyoutItem Text="15 minutes" Tag="15"
+                                                Click="SleepItem_Click"
+                                                AutomationProperties.AutomationId="Sleep15" />
+                                <MenuFlyoutItem Text="30 minutes" Tag="30"
+                                                Click="SleepItem_Click"
+                                                AutomationProperties.AutomationId="Sleep30" />
+                                <MenuFlyoutItem Text="45 minutes" Tag="45"
+                                                Click="SleepItem_Click"
+                                                AutomationProperties.AutomationId="Sleep45" />
+                                <MenuFlyoutItem Text="60 minutes" Tag="60"
+                                                Click="SleepItem_Click"
+                                                AutomationProperties.AutomationId="Sleep60" />
+                            </MenuFlyout>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- ===== Segment switch: Queue | Lyrics ===== -->
+            <Border Grid.Row="3" Margin="20,14,20,10" Padding="3"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="9">
+                <Grid ColumnSpacing="3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="SegmentQueueButton" Grid.Column="0"
+                            HorizontalAlignment="Stretch"
+                            Background="Transparent" BorderThickness="0"
+                            Click="SegmentQueueButton_Click"
+                            AutomationProperties.AutomationId="NowPlayingSegmentQueue"
+                            AutomationProperties.Name="Queue" />
+                    <Button x:Name="SegmentLyricsButton" Grid.Column="1"
+                            HorizontalAlignment="Stretch"
+                            Background="Transparent" BorderThickness="0"
+                            Click="SegmentLyricsButton_Click"
+                            AutomationProperties.AutomationId="NowPlayingSegmentLyrics"
+                            AutomationProperties.Name="Lyrics" />
+                </Grid>
+            </Border>
+
+            <!-- ===== Segment content ===== -->
+            <!-- Queue: tap-to-jump, drag to reorder, hover remove
+                 (design §9.5 + the strip flyout's remove idiom). The
+                 ListView binds the service's live collection, so
+                 reorder writes straight through (the page's model). -->
+            <ListView x:Name="QueueList" Grid.Row="4"
+                      Margin="8,0,8,8"
+                      ItemsSource="{x:Bind ViewModel.Queue}"
+                      SelectedIndex="{x:Bind ViewModel.CurrentQueueIndex, Mode=OneWay}"
+                      IsItemClickEnabled="True"
+                      CanReorderItems="True"
+                      AllowDrop="True"
+                      ItemClick="QueueList_ItemClick"
+                      AutomationProperties.AutomationId="NowPlayingQueue"
+                      AutomationProperties.Name="Playback queue">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Song">
+                        <Grid ColumnSpacing="12" Padding="4,8"
+                              PointerEntered="QueueRow_PointerEntered"
+                              PointerExited="QueueRow_PointerExited">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <SymbolIcon Symbol="MusicInfo" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                <TextBlock Text="{x:Bind Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{x:Bind PrimaryArtistNames}"
+                                           Style="{StaticResource SecondaryCaptionStyle}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <Button Grid.Column="2"
+                                    Width="28" Height="28" Padding="0"
+                                    Background="Transparent" BorderThickness="0"
+                                    VerticalAlignment="Center"
+                                    Visibility="Collapsed"
+                                    Click="QueueRowRemove_Click"
+                                    ToolTipService.ToolTip="Remove from queue"
+                                    AutomationProperties.AutomationId="NowPlayingQueueRemove"
+                                    AutomationProperties.Name="Remove from queue">
+                                <SymbolIcon Symbol="Cancel" Width="12" Height="12" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- Lyrics: the strip flyout's shape (same Core call,
+                 same HasLyrics gate, same status wording, per-song
+                 cache) with the copyright as a footer line. -->
+            <Grid x:Name="LyricsRoot" Grid.Row="4" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="20,4,20,12">
+                        <TextBlock x:Name="LyricsBodyText"
+                                   FontSize="15" LineHeight="28"
+                                   TextWrapping="Wrap"
+                                   IsTextSelectionEnabled="True"
+                                   AutomationProperties.AutomationId="NowPlayingPanelLyricsText"
+                                   AutomationProperties.Name="Lyrics" />
+                        <StackPanel x:Name="LyricsStatusPanel" Spacing="10"
+                                    Margin="0,28,0,28"
+                                    HorizontalAlignment="Center"
+                                    Visibility="Collapsed">
+                            <ProgressRing x:Name="LyricsProgress"
+                                          Width="28" Height="28"
+                                          HorizontalAlignment="Center"
+                                          IsActive="False" />
+                            <TextBlock x:Name="LyricsStatusText"
+                                       Style="{StaticResource SecondaryTextStyle}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap" />
+                            <Button x:Name="LyricsRetryButton"
+                                    HorizontalAlignment="Center"
+                                    Click="LyricsRetryButton_Click"
+                                    Visibility="Collapsed"
+                                    AutomationProperties.AutomationId="NowPlayingPanelLyricsRetry" />
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+                <Border Grid.Row="1"
+                        BorderThickness="0,1,0,0"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        Padding="20,8">
+                    <TextBlock x:Name="LyricsCopyrightText"
+                               Style="{StaticResource SecondaryCaptionStyle}"
+                               TextTrimming="CharacterEllipsis" />
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>
