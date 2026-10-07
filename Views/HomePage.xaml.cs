@@ -31,9 +31,9 @@ public sealed partial class HomePage : Page
 
     /// <summary>Side of the entity artwork's square frame at the
     /// active tier (cell width − the template's 16px inset):
-    /// 200 / 176 / 152. Applied to every realized card by
-    /// ApplyArtworkFrameSize; the XAML default is the tier-0 200.</summary>
-    private double _entityArtSide = 200;
+    /// 180 / 160 / 140. Applied to every realized card by
+    /// ApplyArtworkFrameSize; the XAML default is the tier-0 180.</summary>
+    private double _entityArtSide = 180;
 
     public HomePage()
     {
@@ -190,7 +190,7 @@ public sealed partial class HomePage : Page
     /// <summary>Card-size tiers by content width (design §2): the
     /// artwork only steps down; the row shapes never change
     /// (entity sections 2 rows, song sections 3 rows).</summary>
-    private static int TierForWidth(double width) => width >= 1200 ? 0 : width >= 1000 ? 1 : 2;
+    private static int TierForWidth(double width) => width >= 880 ? 0 : width >= 700 ? 1 : 2;
 
     private void ApplyTier(int tier, bool force)
     {
@@ -202,9 +202,9 @@ public sealed partial class HomePage : Page
         _tier = tier;
         (double entityWidth, double entityHeight) = tier switch
         {
-            0 => (216d, 268d),
-            1 => (192d, 244d),
-            _ => (168d, 220d),
+            0 => (196d, 248d),
+            1 => (176d, 228d),
+            _ => (156d, 208d),
         };
         (double songWidth, double songHeight) = tier == 2 ? (288d, 88d) : (320d, 88d);
         _entityArtSide = entityWidth - 16;
