@@ -1,21 +1,219 @@
 <Page
     x:Class="Omega.Views.HomePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Omega.ViewModels">
 
-    <!-- Phase 0/1 placeholder. The real Home (design §9.2) hangs browse-
-         module sections off this hero: Jump back in / Trending songs /
-         New albums / Charts / Top playlists / Browse discover. -->
-    <ScrollViewer>
-        <StackPanel Padding="24" Spacing="16">
-            <Border Background="{ThemeResource HeroSurfaceBrush}"
-                    CornerRadius="16"
-                    Padding="24">
-                <StackPanel Spacing="6">
-                    <TextBlock x:Uid="HomeTitle" Style="{ThemeResource TitleTextBlockStyle}" />
-                    <TextBlock x:Uid="HomeSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
+    <!-- Home (design §9.2): hero Grid over the top trending entity +
+         browse-module sections. Fluent rules: theme text styles only,
+         4px spacing multiples, theme brushes only, hero surface 16px.
+         Sections hide entirely when empty; errors are an InfoBar with
+         Retry. -->
+    <Page.Resources>
+        <DataTemplate x:Key="SongRowTemplate" x:DataType="vm:SongItemViewModel">
+            <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Image Source="{x:Bind Artwork}" Width="48" Height="48" Stretch="UniformToFill"
+                       AutomationProperties.AccessibilityView="Raw" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Artists}" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
+                <TextBlock Grid.Column="2" Text="{x:Bind DurationText}"
+                           Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                <Button Grid.Column="3" Width="44" Height="44" Padding="0"
+                        Background="Transparent" BorderThickness="0"
+                        Command="{x:Bind ToggleFavoriteCommand}"
+                        AutomationProperties.AutomationId="SongFavoriteButton"
+                        AutomationProperties.Name="{x:Bind FavoriteMenuText, Mode=OneWay}">
+                    <FontIcon Glyph="{x:Bind FavoriteGlyph, Mode=OneWay}" FontSize="18" />
+                </Button>
+                <Button Grid.Column="4" Width="44" Height="44" Padding="0"
+                        Background="Transparent" BorderThickness="0"
+                        AutomationProperties.AutomationId="SongMoreButton"
+                        AutomationProperties.Name="{x:Bind MoreActionsName}">
+                    <FontIcon Glyph="&#xE712;" FontSize="18" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem x:Uid="PlayMenuItem" Command="{x:Bind PlayCommand}"
+                                            AutomationProperties.AutomationId="SongPlayMenuItem" />
+                            <MenuFlyoutItem Text="{x:Bind FavoriteMenuText, Mode=OneWay}"
+                                            Command="{x:Bind ToggleFavoriteCommand}"
+                                            AutomationProperties.AutomationId="SongFavoriteMenuItem" />
+                            <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
+                                            IsEnabled="{x:Bind CanAddToPlaylist}"
+                                            AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="HomeRowTemplate" x:DataType="vm:HomeItemViewModel">
+            <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Image Source="{x:Bind Artwork}" Width="48" Height="48" Stretch="UniformToFill"
+                       AutomationProperties.AccessibilityView="Raw" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <Button Grid.Column="2" Width="44" Height="44" Padding="0"
+                        Background="Transparent" BorderThickness="0"
+                        Command="{x:Bind PlayCommand}"
+                        Visibility="{x:Bind IsPlayable, Converter={StaticResource BoolToVisibilityConverter}}"
+                        AutomationProperties.AutomationId="HomeEntityPlayButton"
+                        AutomationProperties.Name="{x:Bind PlayName}">
+                    <FontIcon Glyph="&#xE768;" FontSize="18" />
+                </Button>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="HomeTileTemplate" x:DataType="vm:HomeItemViewModel">
+            <StackPanel Width="136" Spacing="6">
+                <Image Source="{x:Bind Artwork}" Width="136" Height="136" Stretch="UniformToFill"
+                       AutomationProperties.AccessibilityView="Raw" />
+                <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
+                           Opacity="0.75" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </DataTemplate>
+    </Page.Resources>
+
+    <ScrollViewer>
+        <StackPanel Padding="24,24,24,96" Spacing="24">
+
+            <!-- Hero -->
+            <Border Background="{ThemeResource HeroSurfaceBrush}"
+                    CornerRadius="16" Padding="24"
+                    Visibility="{x:Bind ViewModel.HasHero, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Image Source="{x:Bind ViewModel.Hero.LargeArtwork, Mode=OneWay}"
+                           Width="160" Height="160" Stretch="UniformToFill"
+                           AutomationProperties.AccessibilityView="Raw" />
+                    <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Bind ViewModel.Greeting, Mode=OneWay}"
+                                   Style="{ThemeResource TitleTextBlockStyle}" />
+                        <TextBlock Text="{x:Bind ViewModel.Hero.Title, Mode=OneWay}"
+                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Uid="HomeSubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                            <Button x:Uid="HomeHeroPlayButton"
+                                    Command="{x:Bind ViewModel.PlayHeroCommand}"
+                                    Style="{ThemeResource AccentButtonStyle}"
+                                    MinWidth="48" MinHeight="48"
+                                    AutomationProperties.AutomationId="HomeHeroPlay" />
+                            <Button x:Uid="OpenButton"
+                                    Click="HeroOpen_Click"
+                                    MinHeight="48"
+                                    Visibility="{x:Bind ViewModel.Hero.IsNavigable, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    AutomationProperties.AutomationId="HomeHeroOpen" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
             </Border>
+
+            <!-- Loading / error -->
+            <StackPanel Orientation="Horizontal" Spacing="8"
+                        Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Width="20" Height="20" />
+                <TextBlock x:Uid="LoadingText" Style="{ThemeResource BodyTextBlockStyle}" VerticalAlignment="Center" />
+            </StackPanel>
+            <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                     Severity="Error"
+                     x:Uid="ErrorInfoBar"
+                     Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                     AutomationProperties.AutomationId="HomeError">
+                <InfoBar.ActionButton>
+                    <Button x:Uid="RetryButton" Command="{x:Bind ViewModel.RefreshCommand}"
+                            AutomationProperties.AutomationId="HomeRetry" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+
+            <!-- Jump back in (local history) -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasJumpBackIn, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="SectionJumpBackIn" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <ListView ItemsSource="{x:Bind ViewModel.JumpBackInItems, Mode=OneWay}"
+                          ItemTemplate="{StaticResource SongRowTemplate}"
+                          SelectionMode="None"
+                          AutomationProperties.AutomationId="HomeJumpBackInList" />
+            </StackPanel>
+
+            <!-- Trending songs -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasTrending, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="SectionTrending" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <ListView ItemsSource="{x:Bind ViewModel.TrendingItems, Mode=OneWay}"
+                          ItemTemplate="{StaticResource HomeRowTemplate}"
+                          SelectionMode="None" IsItemClickEnabled="True"
+                          ItemClick="EntityList_ItemClick"
+                          AutomationProperties.AutomationId="HomeTrendingList" />
+            </StackPanel>
+
+            <!-- New albums -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasNewAlbums, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="SectionNewAlbums" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <GridView ItemsSource="{x:Bind ViewModel.NewAlbumItems, Mode=OneWay}"
+                          ItemTemplate="{StaticResource HomeTileTemplate}"
+                          SelectionMode="None" IsItemClickEnabled="True"
+                          ItemClick="EntityList_ItemClick"
+                          AutomationProperties.AutomationId="HomeNewAlbumsGrid" />
+            </StackPanel>
+
+            <!-- Charts -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasCharts, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="SectionCharts" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <GridView ItemsSource="{x:Bind ViewModel.ChartItems, Mode=OneWay}"
+                          ItemTemplate="{StaticResource HomeTileTemplate}"
+                          SelectionMode="None" IsItemClickEnabled="True"
+                          ItemClick="EntityList_ItemClick"
+                          AutomationProperties.AutomationId="HomeChartsGrid" />
+            </StackPanel>
+
+            <!-- Top playlists -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasTopPlaylists, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="SectionTopPlaylists" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <GridView ItemsSource="{x:Bind ViewModel.TopPlaylistItems, Mode=OneWay}"
+                          ItemTemplate="{StaticResource HomeTileTemplate}"
+                          SelectionMode="None" IsItemClickEnabled="True"
+                          ItemClick="EntityList_ItemClick"
+                          AutomationProperties.AutomationId="HomeTopPlaylistsGrid" />
+            </StackPanel>
+
+            <!-- Browse discover (channels — shape rules still apply) -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasDiscover, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="SectionDiscover" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <GridView ItemsSource="{x:Bind ViewModel.DiscoverItems, Mode=OneWay}"
+                          ItemTemplate="{StaticResource HomeTileTemplate}"
+                          SelectionMode="None" IsItemClickEnabled="True"
+                          ItemClick="EntityList_ItemClick"
+                          AutomationProperties.AutomationId="HomeDiscoverGrid" />
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </Page>

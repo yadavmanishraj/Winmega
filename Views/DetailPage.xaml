@@ -1,0 +1,199 @@
+<Page
+    x:Class="Omega.Views.DetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Omega.ViewModels">
+
+    <!-- Detail (design §9.5): one page for Album / Playlist / Artist,
+         chosen by the DetailNavigationArgs kind. Hero artwork +
+         metadata + Play All, then the track list; artist pages add
+         bio / top albums / singles / similar artists sections. -->
+    <Page.Resources>
+        <DataTemplate x:Key="SongRowTemplate" x:DataType="vm:SongItemViewModel">
+            <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Image Source="{x:Bind Artwork}" Width="48" Height="48" Stretch="UniformToFill"
+                       AutomationProperties.AccessibilityView="Raw" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Artists}" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="{x:Bind DurationText}"
+                           Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                <Button Grid.Column="3" Width="44" Height="44" Padding="0"
+                        Background="Transparent" BorderThickness="0"
+                        Command="{x:Bind ToggleFavoriteCommand}"
+                        AutomationProperties.AutomationId="SongFavoriteButton"
+                        AutomationProperties.Name="{x:Bind FavoriteMenuText, Mode=OneWay}">
+                    <FontIcon Glyph="{x:Bind FavoriteGlyph, Mode=OneWay}" FontSize="18" />
+                </Button>
+                <Button Grid.Column="4" Width="44" Height="44" Padding="0"
+                        Background="Transparent" BorderThickness="0"
+                        AutomationProperties.AutomationId="SongMoreButton"
+                        AutomationProperties.Name="{x:Bind MoreActionsName}">
+                    <FontIcon Glyph="&#xE712;" FontSize="18" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem x:Uid="PlayMenuItem" Command="{x:Bind PlayCommand}"
+                                            AutomationProperties.AutomationId="SongPlayMenuItem" />
+                            <MenuFlyoutItem Text="{x:Bind FavoriteMenuText, Mode=OneWay}"
+                                            Command="{x:Bind ToggleFavoriteCommand}"
+                                            AutomationProperties.AutomationId="SongFavoriteMenuItem" />
+                            <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
+                                            IsEnabled="{x:Bind CanAddToPlaylist}"
+                                            AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TileTemplate" x:DataType="vm:TileItemViewModel">
+            <StackPanel Width="136" Spacing="6">
+                <Image Source="{x:Bind Artwork}" Width="136" Height="136" Stretch="UniformToFill"
+                       AutomationProperties.AccessibilityView="Raw" />
+                <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
+                           Opacity="0.75" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TileRowTemplate" x:DataType="vm:TileItemViewModel">
+            <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Image Source="{x:Bind Artwork}" Width="48" Height="48" Stretch="UniformToFill"
+                       AutomationProperties.AccessibilityView="Raw" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Opacity="0.75" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+
+    <ScrollViewer>
+        <StackPanel Padding="24,24,24,96" Spacing="16">
+            <Button Click="Back_Click" MinHeight="44" HorizontalAlignment="Left"
+                    AutomationProperties.AutomationId="DetailBack">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <SymbolIcon Symbol="Back" />
+                    <TextBlock x:Uid="BackLabel" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+
+            <!-- Header -->
+            <Border Background="{ThemeResource HeroSurfaceBrush}" CornerRadius="16" Padding="24">
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Image Source="{x:Bind ViewModel.HeaderArtwork, Mode=OneWay}"
+                           Width="160" Height="160" Stretch="UniformToFill"
+                           AutomationProperties.AccessibilityView="Raw" />
+                    <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Bind ViewModel.Title, Mode=OneWay}"
+                                   Style="{ThemeResource TitleTextBlockStyle}"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Text="{x:Bind ViewModel.MetaText, Mode=OneWay}"
+                                   Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8"
+                                   TextWrapping="Wrap" />
+                        <Button x:Uid="PlayAllButton"
+                                Command="{x:Bind ViewModel.PlayAllCommand}"
+                                Style="{ThemeResource AccentButtonStyle}"
+                                MinWidth="48" MinHeight="48" Margin="0,8,0,0"
+                                HorizontalAlignment="Left"
+                                Visibility="{x:Bind ViewModel.HasSongs, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                AutomationProperties.AutomationId="DetailPlayAll" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Loading / error -->
+            <StackPanel Orientation="Horizontal" Spacing="8"
+                        Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Width="20" Height="20" />
+                <TextBlock x:Uid="LoadingText" Style="{ThemeResource BodyTextBlockStyle}" VerticalAlignment="Center" />
+            </StackPanel>
+            <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                     Severity="Error"
+                     x:Uid="ErrorInfoBar"
+                     Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                     AutomationProperties.AutomationId="DetailError">
+                <InfoBar.ActionButton>
+                    <Button x:Uid="RetryButton" Command="{x:Bind ViewModel.RetryCommand}"
+                            AutomationProperties.AutomationId="DetailRetry" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+
+            <!-- Bio (artists) -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasBio, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="BioHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock Text="{x:Bind ViewModel.BioText, Mode=OneWay}"
+                           Style="{ThemeResource BodyTextBlockStyle}" TextWrapping="Wrap" MaxWidth="760"
+                           HorizontalAlignment="Left" />
+            </StackPanel>
+
+            <!-- Songs / top songs -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasSongs, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Name="SongsHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <ListView ItemsSource="{x:Bind ViewModel.Songs, Mode=OneWay}"
+                          ItemTemplate="{StaticResource SongRowTemplate}"
+                          SelectionMode="None"
+                          AutomationProperties.AutomationId="DetailSongsList" />
+                <Button x:Uid="LoadMoreButton" Command="{x:Bind ViewModel.LoadMoreSongsCommand}"
+                        MinHeight="44" HorizontalAlignment="Left"
+                        Visibility="{x:Bind ViewModel.HasMoreSongs, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                        AutomationProperties.AutomationId="DetailLoadMoreSongs" />
+            </StackPanel>
+
+            <!-- Singles (artists) -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasSingles, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="SinglesHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <ListView ItemsSource="{x:Bind ViewModel.Singles, Mode=OneWay}"
+                          ItemTemplate="{StaticResource SongRowTemplate}"
+                          SelectionMode="None"
+                          AutomationProperties.AutomationId="DetailSinglesList" />
+            </StackPanel>
+
+            <!-- Top albums (artists) -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasTopAlbums, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="TopAlbumsHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <GridView ItemsSource="{x:Bind ViewModel.TopAlbums, Mode=OneWay}"
+                          ItemTemplate="{StaticResource TileTemplate}"
+                          SelectionMode="None" IsItemClickEnabled="True"
+                          ItemClick="Tile_ItemClick"
+                          AutomationProperties.AutomationId="DetailTopAlbumsGrid" />
+            </StackPanel>
+
+            <!-- Similar artists -->
+            <StackPanel Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasSimilarArtists, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="SimilarArtistsHeader" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <ListView ItemsSource="{x:Bind ViewModel.SimilarArtists, Mode=OneWay}"
+                          ItemTemplate="{StaticResource TileRowTemplate}"
+                          SelectionMode="None" IsItemClickEnabled="True"
+                          ItemClick="Tile_ItemClick"
+                          AutomationProperties.AutomationId="DetailSimilarArtistsList" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

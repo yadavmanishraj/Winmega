@@ -10,28 +10,35 @@ using Omega.ViewModels;
 namespace Omega.Views;
 
 /// <summary>
-/// Home page (design §9.2). Code-behind does navigation + dialog
-/// hosting only; all data and playback live in HomeViewModel.
+/// Detail page (design §9.5) for Album / Playlist / Artist. The song
+/// section header differs per kind ("Top songs" for artists), set
+/// here from the navigation args.
 /// </summary>
-public sealed partial class HomePage : Page
+public sealed partial class DetailPage : Page
 {
     private readonly ILibraryStore _store;
 
-    public HomePage()
+    public DetailPage()
     {
         IServiceProvider services = ((App)Application.Current).Services;
-        ViewModel = services.GetRequiredService<HomeViewModel>();
+        ViewModel = services.GetRequiredService<DetailViewModel>();
         _store = services.GetRequiredService<ILibraryStore>();
         InitializeComponent();
         ViewModel.AddToPlaylistRequested += OnAddToPlaylistRequested;
     }
 
-    public HomeViewModel ViewModel { get; }
+    public DetailViewModel ViewModel { get; }
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        await ViewModel.LoadAsync();
+        if (e.Parameter is DetailNavigationArgs args)
+        {
+            SongsHeader.Text = args.Kind == "artist"
+                ? Res.Get("TopSongsHeader")
+                : Res.Get("SongsHeader");
+            await ViewModel.LoadAsync(args);
+        }
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -43,19 +50,19 @@ public sealed partial class HomePage : Page
     private async void OnAddToPlaylistRequested(Song song) =>
         await PlaylistPicker.ShowAsync(XamlRoot, _store, song);
 
-    private void EntityList_ItemClick(object sender, ItemClickEventArgs e)
+    private void Back_Click(object sender, RoutedEventArgs e)
     {
-        if (e.ClickedItem is HomeItemViewModel item && item.DetailArgs is { } args)
+        if (Frame.CanGoBack)
         {
-            Frame.Navigate(typeof(DetailPage), args);
+            Frame.GoBack();
         }
     }
 
-    private void HeroOpen_Click(object sender, RoutedEventArgs e)
+    private void Tile_ItemClick(object sender, ItemClickEventArgs e)
     {
-        if (ViewModel.Hero?.DetailArgs is { } args)
+        if (e.ClickedItem is TileItemViewModel tile)
         {
-            Frame.Navigate(typeof(DetailPage), args);
+            Frame.Navigate(typeof(DetailPage), tile.DetailArgs);
         }
     }
 }
