@@ -293,7 +293,8 @@
                               AutomationProperties.AutomationId="HomeJumpBackInList">
                     <ItemsRepeater x:Name="JumpBackInRepeater"
                                    ItemsSource="{x:Bind ViewModel.JumpBackInItems, Mode=OneWay}"
-                                   ItemTemplate="{StaticResource SongCardTemplate}">
+                                   ItemTemplate="{StaticResource SongCardTemplate}"
+                                   ElementPrepared="CardRepeater_ElementPrepared">
                         <ItemsRepeater.Layout>
                             <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="3"
                                                MinItemWidth="320" MinItemHeight="88" />
@@ -332,7 +333,8 @@
                               AutomationProperties.AutomationId="HomeTrendingList">
                     <ItemsRepeater x:Name="TrendingRepeater"
                                    ItemsSource="{x:Bind ViewModel.TrendingItems, Mode=OneWay}"
-                                   ItemTemplate="{StaticResource TrendingCardTemplate}">
+                                   ItemTemplate="{StaticResource TrendingCardTemplate}"
+                                   ElementPrepared="CardRepeater_ElementPrepared">
                         <ItemsRepeater.Layout>
                             <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="3"
                                                MinItemWidth="320" MinItemHeight="88" />
