@@ -225,11 +225,13 @@
                                         <TextBlock Text="{x:Bind Player.CurrentTitle, Mode=OneWay}"
                                                    Style="{ThemeResource BodyStrongTextBlockStyle}"
                                                    TextAlignment="Center"
+                                                   MaxLines="1" TextWrapping="NoWrap"
                                                    TextTrimming="CharacterEllipsis" />
                                         <TextBlock x:Name="LcdArtistText"
                                                    Text="{x:Bind Player.CurrentArtist, Mode=OneWay}"
                                                    Style="{StaticResource SecondaryCaptionStyle}"
                                                    TextAlignment="Center"
+                                                   MaxLines="1" TextWrapping="NoWrap"
                                                    TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
                                 </Grid>
