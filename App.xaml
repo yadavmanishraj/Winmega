@@ -8,8 +8,6 @@
         <ResourceDictionary>
             <!-- Converters for page state surfaces (loading / empty /
                  error visibility), shared by all pages. -->
-            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter" />
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
@@ -51,6 +49,9 @@
                      be SystemColor*Brush resources only, no opacity. -->
                 <ResourceDictionary x:Key="HighContrast" />
             </ResourceDictionary.ThemeDictionaries>
+
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter" />
 
             <!-- ============ Shared design system (AUDIT_2 §8) ========
                  One definition per component, consumed by every page.

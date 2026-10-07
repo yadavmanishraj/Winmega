@@ -341,7 +341,7 @@
                         AutomationProperties.AutomationId="ShellFailureDismiss"
                         AutomationProperties.Name="Dismiss"
                         Click="FailureDismiss_Click">
-                    <SymbolIcon Symbol="Cancel" FontSize="12" />
+                    <SymbolIcon Symbol="Cancel" Width="12" Height="12" />
                 </Button>
             </Grid>
         </Border>
