@@ -186,6 +186,19 @@ public sealed partial class PlayerService : IPlaybackGateway, IDisposable
     /// <summary>Current playback rate (0.5–2.0, design §7.1).</summary>
     public double PlaybackRate => _player.PlaybackSession.PlaybackRate;
 
+    /// <summary>
+    /// Output volume, 0.0–1.0 (the shell strip's slider binds through
+    /// PlayerViewModel as 0–100). Writes funnel through the dispatcher
+    /// like every other player mutation; the getter reads the engine
+    /// directly and is safe from the UI thread, which is the only
+    /// caller (view-model sync).
+    /// </summary>
+    public double Volume
+    {
+        get => _player.Volume;
+        set => Enqueue(() => _player.Volume = Math.Clamp(value, 0.0, 1.0));
+    }
+
     // ------------------------------------------------------------------
     // IPlaybackGateway transport
     // ------------------------------------------------------------------
