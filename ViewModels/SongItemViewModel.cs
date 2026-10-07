@@ -28,11 +28,7 @@ public partial class SongItemViewModel : ObservableObject
     private readonly Action<SongItemViewModel>? _favoriteChangedHandler;
     private readonly Action<Song>? _playNextHandler;
     private readonly Action<Song>? _addToQueueHandler;
-
-    // NOTE for the downloads workstream (FX3): append any download
-    // handler parameter AFTER addToQueueHandler so existing
-    // positional call sites keep compiling, mirroring the pattern
-    // below (CanDownload flag + a Download RelayCommand).
+    private readonly Func<Song, Task>? _downloadHandler;
     public SongItemViewModel(
         Song song,
         ILibraryStore store,
@@ -41,7 +37,8 @@ public partial class SongItemViewModel : ObservableObject
         Func<SongItemViewModel, Task>? removeHandler = null,
         Action<SongItemViewModel>? favoriteChangedHandler = null,
         Action<Song>? playNextHandler = null,
-        Action<Song>? addToQueueHandler = null)
+        Action<Song>? addToQueueHandler = null,
+        Func<Song, Task>? downloadHandler = null)
     {
         Song = song;
         _store = store;
@@ -51,6 +48,7 @@ public partial class SongItemViewModel : ObservableObject
         _favoriteChangedHandler = favoriteChangedHandler;
         _playNextHandler = playNextHandler;
         _addToQueueHandler = addToQueueHandler;
+        _downloadHandler = downloadHandler;
     }
 
     public Song Song { get; }
@@ -135,4 +133,18 @@ public partial class SongItemViewModel : ObservableObject
     [RelayCommand]
     private Task RemoveAsync() =>
         _removeHandler is null ? Task.CompletedTask : _removeHandler(this);
+
+    // ----------------------------------------------------------------
+    // Download (FX3): present only when the owning page supplies a
+    // download handler (Library / Detail) — the row menu hides the
+    // item where CanDownload is false, mirroring CanAddToPlaylist.
+    // ----------------------------------------------------------------
+
+    public bool CanDownload => _downloadHandler is not null;
+
+    public string DownloadMenuText => Res.Get("Download");
+
+    [RelayCommand]
+    private Task DownloadAsync() =>
+        _downloadHandler is null ? Task.CompletedTask : _downloadHandler(Song);
 }

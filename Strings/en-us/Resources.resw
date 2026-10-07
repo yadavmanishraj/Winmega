@@ -194,8 +194,50 @@
   <data name="LibraryTabDownloads.Text" xml:space="preserve">
     <value>Downloads</value>
   </data>
+  <data name="LibraryTabArtists.Text" xml:space="preserve">
+    <value>Artists</value>
+  </data>
+  <data name="LibraryTabAlbums.Text" xml:space="preserve">
+    <value>Albums</value>
+  </data>
+  <data name="LibraryTabSongs.Text" xml:space="preserve">
+    <value>Songs</value>
+  </data>
   <data name="FavoritesEmpty.Text" xml:space="preserve">
     <value>No favorites yet. Tap the heart on any song to save it here.</value>
+  </data>
+  <data name="ArtistsEmpty.Text" xml:space="preserve">
+    <value>No artists yet. Artists from songs you favorite, play or download will appear here.</value>
+  </data>
+  <data name="AlbumsEmpty.Text" xml:space="preserve">
+    <value>No albums yet. Albums from songs you favorite, play or download will appear here.</value>
+  </data>
+  <data name="SongsEmpty.Text" xml:space="preserve">
+    <value>No songs yet. Songs you favorite, play or download will appear here.</value>
+  </data>
+  <data name="ArtistsCountFormat" xml:space="preserve">
+    <value>{0} artists</value>
+  </data>
+  <data name="AlbumsCountFormat" xml:space="preserve">
+    <value>{0} albums</value>
+  </data>
+  <data name="SongsCountFormat" xml:space="preserve">
+    <value>{0} songs</value>
+  </data>
+  <data name="SongsFilterArtistFormat" xml:space="preserve">
+    <value>Songs by {0}</value>
+  </data>
+  <data name="SongsFilterAlbumFormat" xml:space="preserve">
+    <value>Songs from {0}</value>
+  </data>
+  <data name="SongsFilterClearButton.Content" xml:space="preserve">
+    <value>Clear filter</value>
+  </data>
+  <data name="Download" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="DownloadAlbumButton.Content" xml:space="preserve">
+    <value>Download</value>
   </data>
   <data name="PlaylistsEmpty.Text" xml:space="preserve">
     <value>No playlists yet. Create one to get started.</value>

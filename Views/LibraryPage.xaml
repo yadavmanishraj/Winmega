@@ -5,8 +5,11 @@
     xmlns:vm="using:Omega.ViewModels">
 
     <!-- Library (design §9.4): all-local. SelectorBar sections
-         Favourites / Playlists / History / Downloads, each with a
-         count line and its own empty state. -->
+         Favourites / Playlists / Artists / Albums / Songs / History /
+         Downloads, each with a count line and its own empty state.
+         Artists/Albums/Songs aggregate the local library union
+         (FX3); group tiles open Detail when they carry an upstream
+         id, otherwise they filter the Songs tab. -->
     <Page.Resources>
         <DataTemplate x:Key="SongRowTemplate" x:DataType="vm:SongItemViewModel">
             <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
@@ -49,6 +52,10 @@
                             <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{x:Bind AddToPlaylistCommand}"
                                             IsEnabled="{x:Bind CanAddToPlaylist}"
                                             AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
+                            <MenuFlyoutItem Text="{x:Bind DownloadMenuText}"
+                                            Command="{x:Bind DownloadCommand}"
+                                            Visibility="{x:Bind CanDownload, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            AutomationProperties.AutomationId="SongDownloadMenuItem" />
                             <MenuFlyoutItem Text="{x:Bind RemoveMenuText}"
                                             Command="{x:Bind RemoveCommand}"
                                             Visibility="{x:Bind CanRemove, Converter={StaticResource BoolToVisibilityConverter}}"
@@ -67,6 +74,17 @@
                            Opacity="0.75" />
                 <TextBlock Text="{x:Bind UpdatedText}" Style="{ThemeResource CaptionTextBlockStyle}"
                            Opacity="0.75" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="GroupTileTemplate" x:DataType="vm:LibraryGroupItemViewModel">
+            <StackPanel Width="136" Spacing="6">
+                <Image Source="{x:Bind Artwork}" Width="136" Height="136" Stretch="UniformToFill"
+                       AutomationProperties.AccessibilityView="Raw" />
+                <TextBlock Text="{x:Bind Name}" Style="{ThemeResource BodyStrongTextBlockStyle}"
+                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{x:Bind Subtitle}" Style="{ThemeResource CaptionTextBlockStyle}"
+                           Opacity="0.75" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </DataTemplate>
 
@@ -113,18 +131,29 @@
             <TextBlock x:Uid="LibraryTitle" Style="{ThemeResource TitleTextBlockStyle}" />
             <TextBlock x:Uid="LibrarySubtitle" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.8" />
 
-            <SelectorBar x:Name="LibraryTabs"
-                         AutomationProperties.AutomationId="LibraryTabs"
-                         SelectionChanged="LibraryTabs_SelectionChanged">
-                <SelectorBarItem x:Name="TabFavorites" x:Uid="LibraryTabFavorites" IsSelected="True"
-                                 AutomationProperties.AutomationId="LibraryTabFavorites" />
-                <SelectorBarItem x:Name="TabPlaylists" x:Uid="LibraryTabPlaylists"
-                                 AutomationProperties.AutomationId="LibraryTabPlaylists" />
-                <SelectorBarItem x:Name="TabHistory" x:Uid="LibraryTabHistory"
-                                 AutomationProperties.AutomationId="LibraryTabHistory" />
-                <SelectorBarItem x:Name="TabDownloads" x:Uid="LibraryTabDownloads"
-                                 AutomationProperties.AutomationId="LibraryTabDownloads" />
-            </SelectorBar>
+            <!-- Seven tabs: the SelectorBar scrolls horizontally when
+                 the window is too narrow for all of them. -->
+            <ScrollViewer HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
+                <SelectorBar x:Name="LibraryTabs"
+                             AutomationProperties.AutomationId="LibraryTabs"
+                             SelectionChanged="LibraryTabs_SelectionChanged">
+                    <SelectorBarItem x:Name="TabFavorites" x:Uid="LibraryTabFavorites" IsSelected="True"
+                                     AutomationProperties.AutomationId="LibraryTabFavorites" />
+                    <SelectorBarItem x:Name="TabPlaylists" x:Uid="LibraryTabPlaylists"
+                                     AutomationProperties.AutomationId="LibraryTabPlaylists" />
+                    <SelectorBarItem x:Name="TabArtists" x:Uid="LibraryTabArtists"
+                                     AutomationProperties.AutomationId="LibraryTabArtists" />
+                    <SelectorBarItem x:Name="TabAlbums" x:Uid="LibraryTabAlbums"
+                                     AutomationProperties.AutomationId="LibraryTabAlbums" />
+                    <SelectorBarItem x:Name="TabSongs" x:Uid="LibraryTabSongs"
+                                     AutomationProperties.AutomationId="LibraryTabSongs" />
+                    <SelectorBarItem x:Name="TabHistory" x:Uid="LibraryTabHistory"
+                                     AutomationProperties.AutomationId="LibraryTabHistory" />
+                    <SelectorBarItem x:Name="TabDownloads" x:Uid="LibraryTabDownloads"
+                                     AutomationProperties.AutomationId="LibraryTabDownloads" />
+                </SelectorBar>
+            </ScrollViewer>
 
             <!-- Loading / error -->
             <StackPanel Orientation="Horizontal" Spacing="8"
@@ -143,7 +172,7 @@
                 </InfoBar.ActionButton>
             </InfoBar>
 
-            <!-- Favorites -->
+            <!-- Favorites (tab 0) -->
             <StackPanel x:Name="FavoritesPanel" Spacing="8">
                 <TextBlock Text="{x:Bind ViewModel.FavoritesCountText, Mode=OneWay}"
                            Style="{ThemeResource CaptionTextBlockStyle}" Opacity="0.75" />
@@ -151,11 +180,11 @@
                            Visibility="{x:Bind ViewModel.HasFavorites, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
                 <ListView ItemsSource="{x:Bind ViewModel.Favorites, Mode=OneWay}"
                           ItemTemplate="{StaticResource SongRowTemplate}"
-                          SelectionMode="None"
+                          SelectionMode="None" IsItemClickEnabled="True" ItemClick="SongRow_ItemClick"
                           AutomationProperties.AutomationId="LibraryFavoritesList" />
             </StackPanel>
 
-            <!-- Playlists -->
+            <!-- Playlists (tab 1) -->
             <StackPanel x:Name="PlaylistsPanel" Spacing="12" Visibility="Collapsed">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <TextBlock Text="{x:Bind ViewModel.PlaylistsCountText, Mode=OneWay}"
@@ -196,13 +225,61 @@
                         </StackPanel>
                         <ListView ItemsSource="{x:Bind ViewModel.PlaylistSongs, Mode=OneWay}"
                                   ItemTemplate="{StaticResource SongRowTemplate}"
-                                  SelectionMode="None"
+                                  SelectionMode="None" IsItemClickEnabled="True" ItemClick="SongRow_ItemClick"
                                   AutomationProperties.AutomationId="LibraryPlaylistSongsList" />
                     </StackPanel>
                 </Grid>
             </StackPanel>
 
-            <!-- History -->
+            <!-- Artists (tab 2) -->
+            <StackPanel x:Name="ArtistsPanel" Spacing="8" Visibility="Collapsed">
+                <TextBlock Text="{x:Bind ViewModel.ArtistsCountText, Mode=OneWay}"
+                           Style="{ThemeResource CaptionTextBlockStyle}" Opacity="0.75" />
+                <TextBlock x:Uid="ArtistsEmpty" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.75"
+                           Visibility="{x:Bind ViewModel.HasArtists, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                <GridView ItemsSource="{x:Bind ViewModel.Artists, Mode=OneWay}"
+                          ItemTemplate="{StaticResource GroupTileTemplate}"
+                          SelectionMode="None" IsItemClickEnabled="True" ItemClick="Group_ItemClick"
+                          AutomationProperties.AutomationId="LibraryArtistsGrid" />
+            </StackPanel>
+
+            <!-- Albums (tab 3) -->
+            <StackPanel x:Name="AlbumsPanel" Spacing="8" Visibility="Collapsed">
+                <TextBlock Text="{x:Bind ViewModel.AlbumsCountText, Mode=OneWay}"
+                           Style="{ThemeResource CaptionTextBlockStyle}" Opacity="0.75" />
+                <TextBlock x:Uid="AlbumsEmpty" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.75"
+                           Visibility="{x:Bind ViewModel.HasAlbums, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                <GridView ItemsSource="{x:Bind ViewModel.Albums, Mode=OneWay}"
+                          ItemTemplate="{StaticResource GroupTileTemplate}"
+                          SelectionMode="None" IsItemClickEnabled="True" ItemClick="Group_ItemClick"
+                          AutomationProperties.AutomationId="LibraryAlbumsGrid" />
+            </StackPanel>
+
+            <!-- Songs (tab 4): the whole local union, optionally
+                 filtered to one artist/album group. -->
+            <StackPanel x:Name="SongsPanel" Spacing="8" Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="{x:Bind ViewModel.SongsCountText, Mode=OneWay}"
+                               Style="{ThemeResource CaptionTextBlockStyle}" Opacity="0.75"
+                               VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                Visibility="{x:Bind ViewModel.HasSongsFilter, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="{x:Bind ViewModel.SongsFilterText, Mode=OneWay}"
+                                   Style="{ThemeResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                        <Button x:Uid="SongsFilterClearButton" Command="{x:Bind ViewModel.ClearSongsFilterCommand}"
+                                MinHeight="44"
+                                AutomationProperties.AutomationId="LibrarySongsFilterClear" />
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock x:Uid="SongsEmpty" Style="{ThemeResource BodyTextBlockStyle}" Opacity="0.75"
+                           Visibility="{x:Bind ViewModel.HasSongs, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                <ListView ItemsSource="{x:Bind ViewModel.Songs, Mode=OneWay}"
+                          ItemTemplate="{StaticResource SongRowTemplate}"
+                          SelectionMode="None" IsItemClickEnabled="True" ItemClick="SongRow_ItemClick"
+                          AutomationProperties.AutomationId="LibrarySongsList" />
+            </StackPanel>
+
+            <!-- History (tab 5) -->
             <StackPanel x:Name="HistoryPanel" Spacing="8" Visibility="Collapsed">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <TextBlock Text="{x:Bind ViewModel.HistoryCountText, Mode=OneWay}"
@@ -216,11 +293,12 @@
                            Visibility="{x:Bind ViewModel.HasHistory, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
                 <ListView ItemsSource="{x:Bind ViewModel.History, Mode=OneWay}"
                           ItemTemplate="{StaticResource SongRowTemplate}"
-                          SelectionMode="None"
+                          SelectionMode="None" IsItemClickEnabled="True" ItemClick="SongRow_ItemClick"
                           AutomationProperties.AutomationId="LibraryHistoryList" />
             </StackPanel>
 
-            <!-- Downloads -->
+            <!-- Downloads (tab 6): row click plays completed downloads
+                 from the local file and retries failed ones. -->
             <StackPanel x:Name="DownloadsPanel" Spacing="8" Visibility="Collapsed">
                 <TextBlock Text="{x:Bind ViewModel.DownloadsCountText, Mode=OneWay}"
                            Style="{ThemeResource CaptionTextBlockStyle}" Opacity="0.75" />
@@ -228,7 +306,7 @@
                            Visibility="{x:Bind ViewModel.HasDownloads, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
                 <ListView ItemsSource="{x:Bind ViewModel.Downloads, Mode=OneWay}"
                           ItemTemplate="{StaticResource DownloadRowTemplate}"
-                          SelectionMode="None"
+                          SelectionMode="None" IsItemClickEnabled="True" ItemClick="DownloadsList_ItemClick"
                           AutomationProperties.AutomationId="LibraryDownloadsList" />
             </StackPanel>
         </StackPanel>
