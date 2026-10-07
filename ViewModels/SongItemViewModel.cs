@@ -19,7 +19,6 @@ namespace Omega.ViewModels;
 /// AOT rule (MVVMTK0045): [ObservableProperty] on PARTIAL PROPERTIES
 /// only — never the field form.
 /// </summary>
-[Microsoft.UI.Xaml.Data.Bindable]
 public partial class SongItemViewModel : ObservableObject
 {
     private readonly ILibraryStore _store;

@@ -10,6 +10,7 @@
                  error visibility), shared by all pages. -->
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <ResourceDictionary Source="Templates/SongRowTemplates.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <ResourceDictionary.ThemeDictionaries>
@@ -158,97 +159,7 @@
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
 
-            <!-- ============ THE shared song row (AUDIT_2 §8.1) ========
-                 One template for every song list in the app (Home,
-                 Search, Library, Detail) — the four page-local copies
-                 had already diverged (Library's had Remove, Detail's
-                 did not) and the pattern failed under real pointer
-                 input (POINTER_QA F4: the inline Button.Flyout inside
-                 the recycled template never materialised and the click
-                 landed on the adjacent favourite toggle). Structural
-                 rules here: favourite and More are sibling buttons on
-                 their own Auto columns (44px each, 12px spacing, no
-                 shared cell, no overlap); the SAME MenuFlyout content
-                 (a ContextFlyout on the template root does not
-                 compile in App-level templates - WMC0612 - so the
-                 button menu is the menu); Play is also on the
-                 artwork (hover disc),
-                 so the menu is never the only route to play.
-                 Bindings are classic {Binding} + x:DataType, NOT
-                 {x:Bind}: the XBF generator cannot resolve compiled
-                 bindings in Application-level templates (WMC0612
-                 "Property Not Found" on any x:Bind here, verified by
-                 bisection); SongItemViewModel carries [Bindable] so
-                 the classic bindings stay AOT/trim-clean. -->
-            <DataTemplate x:Key="SongRowTemplate" x:DataType="vm:SongItemViewModel">
-                <Grid ColumnSpacing="12" Padding="4,4" MinHeight="56">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="48" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Grid Width="48" Height="48">
-                        <Image Source="{Binding Artwork}" Width="48" Height="48" Stretch="UniformToFill"
-                               AutomationProperties.AccessibilityView="Raw" />
-                        <Button Width="28" Height="28" Padding="0" CornerRadius="14"
-                                HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                                Background="{ThemeResource ControlFillColorDefaultBrush}"
-                                BorderThickness="0"
-                                Command="{Binding PlayCommand}"
-                                AutomationProperties.AutomationId="SongArtworkPlayButton"
-                                AutomationProperties.Name="Play">
-                            <FontIcon Glyph="&#xE768;" FontSize="12" />
-                        </Button>
-                    </Grid>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                        <TextBlock Text="{Binding Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding Artists}" Style="{StaticResource SecondaryCaptionStyle}"
-                                   TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                    <TextBlock Grid.Column="2" Text="{Binding DurationText}"
-                               Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
-                    <Button Grid.Column="3" Style="{StaticResource IconButtonStyle}"
-                            Command="{Binding ToggleFavoriteCommand}"
-                            AutomationProperties.AutomationId="SongFavoriteButton"
-                            AutomationProperties.Name="{Binding FavoriteMenuText}">
-                        <FontIcon Glyph="{Binding FavoriteGlyph}" FontSize="18" />
-                    </Button>
-                    <Button Grid.Column="4" Style="{StaticResource IconButtonStyle}"
-                            AutomationProperties.AutomationId="SongMoreButton"
-                            AutomationProperties.Name="{Binding MoreActionsName}">
-                        <FontIcon Glyph="&#xE712;" FontSize="18" />
-                        <Button.Flyout>
-                            <MenuFlyout>
-                                <MenuFlyoutItem x:Uid="PlayMenuItem" Command="{Binding PlayCommand}"
-                                                AutomationProperties.AutomationId="SongPlayMenuItem" />
-                                <MenuFlyoutItem x:Uid="PlayNextMenuItem" Command="{Binding PlayNextCommand}"
-                                                Visibility="{Binding CanPlayNext, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                AutomationProperties.AutomationId="SongPlayNextMenuItem" />
-                                <MenuFlyoutItem x:Uid="AddToQueueMenuItem" Command="{Binding AddToQueueCommand}"
-                                                Visibility="{Binding CanAddToQueue, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                AutomationProperties.AutomationId="SongAddToQueueMenuItem" />
-                                <MenuFlyoutItem Text="{Binding FavoriteMenuText}"
-                                                Command="{Binding ToggleFavoriteCommand}"
-                                                AutomationProperties.AutomationId="SongFavoriteMenuItem" />
-                                <MenuFlyoutItem x:Uid="AddToPlaylistMenuItem" Command="{Binding AddToPlaylistCommand}"
-                                                IsEnabled="{Binding CanAddToPlaylist}"
-                                                AutomationProperties.AutomationId="SongAddToPlaylistMenuItem" />
-                                <MenuFlyoutItem x:Uid="DownloadMenuItem" Command="{Binding DownloadCommand}"
-                                                Visibility="{Binding CanDownload, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                AutomationProperties.AutomationId="SongDownloadMenuItem" />
-                                <MenuFlyoutItem Text="{Binding RemoveMenuText}"
-                                                Command="{Binding RemoveCommand}"
-                                                Visibility="{Binding CanRemove, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                AutomationProperties.AutomationId="SongRemoveMenuItem" />
-                            </MenuFlyout>
-                        </Button.Flyout>
-                    </Button>
-                </Grid>
-            </DataTemplate>
-
+            
             <!-- Theming (design §10): explicit Light / Dark / HighContrast
                  dictionaries — never "Default". Usage sites bind with
                  {ThemeResource} so theme switches live-update. The play-
