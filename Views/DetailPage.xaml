@@ -86,7 +86,7 @@
     </Page.Resources>
 
     <ScrollViewer>
-        <StackPanel Padding="24,24,24,96" Spacing="16">
+        <StackPanel Padding="24,24,24,24" Spacing="16">
             <Button Click="Back_Click" MinHeight="44" HorizontalAlignment="Left"
                     AutomationProperties.AutomationId="DetailBack">
                 <StackPanel Orientation="Horizontal" Spacing="8">

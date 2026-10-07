@@ -96,7 +96,7 @@
     </Page.Resources>
 
     <ScrollViewer>
-        <StackPanel Padding="24,24,24,96" Spacing="24">
+        <StackPanel Padding="24,24,24,24" Spacing="24">
 
             <!-- Hero -->
             <Border Background="{ThemeResource HeroSurfaceBrush}"
