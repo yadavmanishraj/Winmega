@@ -392,7 +392,7 @@ public sealed partial class MainWindow : Window
                 // processing, including the auto-select, first).
                 OpenNowPlayingPanel(null);
                 DispatcherQueue.TryEnqueue(
-                    Microsoft.UI.Dispatching.DispatcherPriority.Low,
+                    Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
                     () =>
                     {
                         if (_navSelectionBeforePanel is not null

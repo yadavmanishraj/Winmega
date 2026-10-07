@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:Omega.Core.Models"
+    xmlns:controls="using:Omega.Controls"
     SizeChanged="NowPlayingPanel_SizeChanged">
 
     <!-- THE Now Playing surface (approved panel design, 2026-10-07;
@@ -37,7 +38,7 @@
         <!-- Resize grip: hit-testable strip on the panel's left
              edge (transparent fill — a null background would not be
              hit-testable). The 1px stroke line is centred in it. -->
-        <Border x:Name="GripBorder" Grid.Column="0"
+        <controls:ResizeGripBorder x:Name="GripBorder" Grid.Column="0"
                 Background="Transparent"
                 PointerPressed="Grip_PointerPressed"
                 PointerMoved="Grip_PointerMoved"
@@ -49,7 +50,7 @@
                 AutomationProperties.Name="Resize panel">
             <Border Width="1" HorizontalAlignment="Center"
                     Background="{ThemeResource CardStrokeColorDefaultBrush}" />
-        </Border>
+        </controls:ResizeGripBorder>
 
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>

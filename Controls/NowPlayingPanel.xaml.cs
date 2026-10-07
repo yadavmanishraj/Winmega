@@ -6,7 +6,6 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.UI.Input;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -76,7 +75,6 @@ public sealed partial class NowPlayingPanel : UserControl
         SegmentQueueButton.Content = Res.Get("Queue");
         SegmentLyricsButton.Content = Res.Get("Lyrics");
         LyricsRetryButton.Content = Res.Get("LyricsRetry");
-        GripBorder.ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
 
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         Unloaded += OnPanelUnloaded;
