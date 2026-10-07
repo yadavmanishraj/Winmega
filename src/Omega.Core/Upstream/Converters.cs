@@ -128,7 +128,11 @@ public sealed class FlexibleSongListConverter : JsonConverter<List<RawSongDto>>
                 case JsonTokenType.EndArray:
                     return songs;
                 case JsonTokenType.StartObject:
-                    RawSongDto? song = JsonSerializer.Deserialize<RawSongDto>(ref reader, options);
+                    // JsonTypeInfo overload (source-generated) — the
+                    // options-based generic overload is RUC/RDC-marked and
+                    // trips IL2026/IL3050 even when the options ARE the
+                    // source-gen context.
+                    RawSongDto? song = JsonSerializer.Deserialize(ref reader, UpstreamJsonContext.Default.RawSongDto);
                     if (song is not null)
                     {
                         songs.Add(song);
@@ -157,7 +161,7 @@ public sealed class FlexibleSongListConverter : JsonConverter<List<RawSongDto>>
         writer.WriteStartArray();
         foreach (RawSongDto song in value)
         {
-            JsonSerializer.Serialize(writer, song, options);
+            JsonSerializer.Serialize(writer, song, UpstreamJsonContext.Default.RawSongDto);
         }
 
         writer.WriteEndArray();
