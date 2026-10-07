@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
@@ -13,7 +16,9 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
+using Omega.Core.Models;
 using Omega.Core.Persistence;
+using Omega.Core.Upstream;
 using Omega.Services;
 using Omega.ViewModels;
 using Omega.Views;
@@ -43,12 +48,19 @@ namespace Omega;
 public sealed partial class MainWindow : Window
 {
     private readonly List<NavigationViewItem> _playlistItems = new();
+    private readonly JioSaavnClient _client;
+    private readonly ObservableCollection<QueueFlyoutItem> _upNextItems = new();
+    private readonly Dictionary<string, LyricsResult?> _lyricsCache = new();
     private Type? _lastPageType;
     private object? _currentNavParameter;
     private string? _navError;
     private double _volumeBeforeMute = 100;
     private InputNonClientPointerSource? _nonClientSource;
     private RectInt32[] _passthroughRects = Array.Empty<RectInt32>();
+    private bool _queueFlyoutOpen;
+    private bool _lyricsFlyoutOpen;
+    private CancellationTokenSource? _lyricsFlyoutCts;
+    private string? _lyricsFlyoutSongId;
 
     public MainWindow()
     {
@@ -56,6 +68,7 @@ public sealed partial class MainWindow : Window
         // InitializeComponent so compiled x:Bind can read them.
         ViewModel = ((App)Application.Current).Services.GetRequiredService<ShellViewModel>();
         Player = ((App)Application.Current).Services.GetRequiredService<PlayerViewModel>();
+        _client = ((App)Application.Current).Services.GetRequiredService<JioSaavnClient>();
         InitializeComponent();
 
         // Custom title bar (spec §1): ONLY the background border is
@@ -99,6 +112,8 @@ public sealed partial class MainWindow : Window
         ViewModel.Playlists.CollectionChanged += OnPlaylistsChanged;
         ViewModel.PropertyChanged += OnShellPropertyChanged;
         Player.PropertyChanged += OnPlayerPropertyChanged;
+        Player.Queue.CollectionChanged += OnQueueCollectionChanged;
+        InitFlyoutTexts();
 
         NavigateSection(typeof(HomePage), null);
         RebuildPlaylistItems();
@@ -115,6 +130,15 @@ public sealed partial class MainWindow : Window
 
     /// <summary>Player view model (transport + LCD bindings).</summary>
     public PlayerViewModel Player { get; }
+
+    /// <summary>
+    /// The queue flyout's "Up next" rows — the live queue minus the
+    /// current track, rebuilt by <c>SyncQueueFlyout</c> whenever the
+    /// queue or the current index moves while the flyout is open.
+    /// The collection instance never changes, so the flyout's list
+    /// binds it once.
+    /// </summary>
+    public ObservableCollection<QueueFlyoutItem> UpNextItems => _upNextItems;
 
     // ------------------------------------------------------------------
     // Title bar
@@ -557,22 +581,17 @@ public sealed partial class MainWindow : Window
     private void NowPlayingOpen_Click(object sender, RoutedEventArgs e) =>
         NavigateToNowPlaying(null);
 
-    private void LyricsButton_Click(object sender, RoutedEventArgs e) =>
-        NavigateToNowPlaying("lyrics");
-
-    private void QueueButton_Click(object sender, RoutedEventArgs e) =>
-        NavigateToNowPlaying("queue");
-
     private void OpenQueueMenuItem_Click(object sender, RoutedEventArgs e) =>
         NavigateToNowPlaying("queue");
 
     /// <summary>
-    /// The well, the Lyrics button and the Queue button all land on
-    /// the Now Playing page (design §9.5); the section parameter
-    /// tells the page which section the user asked for — lyrics opens
-    /// the lyrics panel, queue scrolls the queue into view — instead
-    /// of three controls silently doing the identical thing
-    /// (AUDIT_1 B3).
+    /// The well lands on the Now Playing page (design §9.5); the
+    /// section parameter tells the page which section the user asked
+    /// for — lyrics opens the lyrics panel, queue scrolls the queue
+    /// into view — instead of controls silently doing the identical
+    /// thing (AUDIT_1 B3). Since the strip's Lyrics/Queue buttons
+    /// became flyouts, this route is used by the LCD menu and by the
+    /// flyouts' footers.
     /// </summary>
     private void NavigateToNowPlaying(string? section)
     {
@@ -580,6 +599,305 @@ public sealed partial class MainWindow : Window
         {
             ContentFrame.Navigate(typeof(NowPlayingPage), section);
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Strip flyouts: queue + lyrics quick views (approved sample,
+    // 2026-10-07). Both are light-dismiss Flyouts hung off their
+    // strip buttons; opening one is an outside click for the other,
+    // so they never stack. Presentation state is synced in code
+    // (the shell's pattern for its dynamic surfaces); the lyrics
+    // fetch mirrors the Now Playing page's — same Core call, same
+    // HasLyrics gate, same status wording — plus a per-song cache
+    // so reopening is instant.
+    // ------------------------------------------------------------------
+
+    private void InitFlyoutTexts()
+    {
+        QueueFlyoutHeader.Text = Res.Get("Queue");
+        LyricsFlyoutHeader.Text = Res.Get("Lyrics");
+        QueueNowPlayingLabel.Text = Res.Get("QueueNowPlayingLabel");
+        QueueUpNextLabel.Text = Res.Get("QueueUpNextLabel");
+        ClearQueueButton.Content = Res.Get("QueueClear");
+        QueueFlyoutEmptyTitle.Text = Res.Get("QueueEmptyTitle");
+        QueueFlyoutEmptyBody.Text = Res.Get("QueueEmptyBody");
+        QueueOpenNowPlayingText.Text = Res.Get("OpenNowPlaying");
+        LyricsOpenNowPlayingText.Text = Res.Get("LyricsOpenNowPlaying");
+        LyricsFlyoutRetry.Content = Res.Get("LyricsRetry");
+    }
+
+    private void QueueFlyout_Opening(object sender, object e)
+    {
+        _queueFlyoutOpen = true;
+        SyncQueueFlyout();
+    }
+
+    private void QueueFlyout_Closed(object sender, object e) =>
+        _queueFlyoutOpen = false;
+
+    private void OnQueueCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (_queueFlyoutOpen)
+        {
+            SyncQueueFlyout();
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the flyout's queue surfaces from the live queue: the
+    /// header count (whole queue), and the "Up next" rows — every
+    /// queue slot except the current index, in queue order. Empty
+    /// up-next swaps the list for the composed empty state; Clear is
+    /// enabled exactly when there is something to clear.
+    /// </summary>
+    private void SyncQueueFlyout()
+    {
+        ObservableCollection<Song> queue = Player.Queue;
+        int currentIndex = Player.CurrentQueueIndex;
+        bool hasCurrent = Player.CurrentSong is not null;
+
+        QueueFlyoutCount.Text = Res.Format("SongsCountFormat", queue.Count);
+        QueueNowPlayingLabel.Visibility = hasCurrent ? Visibility.Visible : Visibility.Collapsed;
+        QueueNowPlayingBlock.Visibility = hasCurrent ? Visibility.Visible : Visibility.Collapsed;
+
+        _upNextItems.Clear();
+        for (int i = 0; i < queue.Count; i++)
+        {
+            if (i != currentIndex)
+            {
+                _upNextItems.Add(new QueueFlyoutItem(queue[i]));
+            }
+        }
+
+        bool hasUpNext = _upNextItems.Count > 0;
+        QueueFlyoutList.Visibility = hasUpNext ? Visibility.Visible : Visibility.Collapsed;
+        QueueUpNextLabel.Visibility = hasUpNext ? Visibility.Visible : Visibility.Collapsed;
+        QueueFlyoutEmpty.Visibility = hasUpNext ? Visibility.Collapsed : Visibility.Visible;
+        ClearQueueButton.IsEnabled = hasUpNext;
+    }
+
+    private void QueueFlyoutList_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is QueueFlyoutItem item)
+        {
+            // Same tap-to-jump the Now Playing page's queue uses;
+            // the flyout stays open and re-syncs onto the new
+            // current track (StateChanged follows the jump).
+            Player.PlayQueueItem(item.Song);
+        }
+    }
+
+    private void QueueRow_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement row && FindDescendant<Button>(row) is { } remove)
+        {
+            remove.Visibility = Visibility.Visible;
+        }
+    }
+
+    private void QueueRow_PointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement row && FindDescendant<Button>(row) is { } remove)
+        {
+            remove.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void QueueRowRemove_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: QueueFlyoutItem item })
+        {
+            return;
+        }
+
+        // The service keeps every queue invariant (current-index and
+        // play-order remap) in its CollectionChanged handler, so a
+        // plain removal IS the remove-from-queue op — the same
+        // mutation shape the Now Playing list's drag-reorder uses.
+        // Removal is by reference: duplicate copies of one song in
+        // the queue must not evict each other.
+        ObservableCollection<Song> queue = Player.Queue;
+        for (int i = 0; i < queue.Count; i++)
+        {
+            if (ReferenceEquals(queue[i], item.Song))
+            {
+                queue.RemoveAt(i);
+                return;
+            }
+        }
+
+        int index = queue.IndexOf(item.Song);
+        if (index >= 0)
+        {
+            queue.RemoveAt(index);
+        }
+    }
+
+    private void ClearQueueButton_Click(object sender, RoutedEventArgs e)
+    {
+        // Remove everything except the currently playing entry,
+        // back to front so each removal's index remap stays trivial.
+        // With nothing playing, the whole queue goes.
+        ObservableCollection<Song> queue = Player.Queue;
+        Song? current = Player.CurrentSong;
+        for (int i = queue.Count - 1; i >= 0; i--)
+        {
+            if (!ReferenceEquals(queue[i], current))
+            {
+                queue.RemoveAt(i);
+            }
+        }
+    }
+
+    private void QueueOpenNowPlaying_Click(object sender, RoutedEventArgs e)
+    {
+        QueueFlyout.Hide();
+        NavigateToNowPlaying("queue");
+    }
+
+    private void LyricsFlyout_Opening(object sender, object e)
+    {
+        _lyricsFlyoutOpen = true;
+        _ = RefreshLyricsFlyoutAsync();
+    }
+
+    private void LyricsFlyout_Closed(object sender, object e)
+    {
+        _lyricsFlyoutOpen = false;
+        _lyricsFlyoutCts?.Cancel();
+    }
+
+    private void LyricsFlyoutRetry_Click(object sender, RoutedEventArgs e) =>
+        _ = RefreshLyricsFlyoutAsync();
+
+    private void LyricsOpenNowPlaying_Click(object sender, RoutedEventArgs e)
+    {
+        LyricsFlyout.Hide();
+        NavigateToNowPlaying("lyrics");
+    }
+
+    private enum LyricsFlyoutState
+    {
+        Content,
+        Loading,
+        Message,
+        Error,
+    }
+
+    /// <summary>
+    /// Fetches the current song's lyrics for the flyout. Gated on
+    /// <see cref="Song.HasLyrics"/> like the Now Playing page (the
+    /// search payload's flag is the accurate one). Results cache per
+    /// song id — including the "upstream has none" answer — so
+    /// reopening the flyout is instant; a track change while the
+    /// flyout is open refetches (see OnPlayerPropertyChanged).
+    /// </summary>
+    private async Task RefreshLyricsFlyoutAsync()
+    {
+        Song? song = Player.CurrentSong;
+        LyricsFlyoutMeta.Text = song is null
+            ? string.Empty
+            : song.PrimaryArtistNames.Length == 0
+                ? song.Name
+                : Res.Format("LyricsMetaFormat", song.Name, song.PrimaryArtistNames);
+
+        if (song is null)
+        {
+            _lyricsFlyoutSongId = null;
+            SetLyricsFlyoutState(LyricsFlyoutState.Message, Res.Get("LyricsNothingPlaying"));
+            return;
+        }
+
+        if (!song.HasLyrics)
+        {
+            _lyricsFlyoutSongId = song.Id;
+            SetLyricsFlyoutState(LyricsFlyoutState.Message, Res.Get("LyricsUnavailable"));
+            return;
+        }
+
+        if (_lyricsCache.TryGetValue(song.Id, out LyricsResult? cached))
+        {
+            _lyricsFlyoutSongId = song.Id;
+            if (cached is null)
+            {
+                SetLyricsFlyoutState(LyricsFlyoutState.Message, Res.Get("LyricsUnavailable"));
+            }
+            else
+            {
+                ShowLyricsFlyout(cached);
+            }
+
+            return;
+        }
+
+        _lyricsFlyoutCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _lyricsFlyoutCts = cts;
+        string songId = song.Id;
+        _lyricsFlyoutSongId = songId;
+        SetLyricsFlyoutState(LyricsFlyoutState.Loading, Res.Get("LyricsLoading"));
+
+        try
+        {
+            LyricsResult? result = await _client.GetLyricsAsync(songId, cts.Token);
+            if (cts.IsCancellationRequested
+                || !string.Equals(_lyricsFlyoutSongId, songId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _lyricsCache[songId] = result;
+            if (result is null)
+            {
+                SetLyricsFlyoutState(LyricsFlyoutState.Message, Res.Get("LyricsUnavailable"));
+                return;
+            }
+
+            ShowLyricsFlyout(result);
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer fetch or the flyout closed.
+        }
+        catch (Exception)
+        {
+            if (!cts.IsCancellationRequested)
+            {
+                SetLyricsFlyoutState(LyricsFlyoutState.Error, Res.Get("LyricsLoadFailed"));
+            }
+        }
+    }
+
+    private void ShowLyricsFlyout(LyricsResult result)
+    {
+        LyricsFlyoutText.Text = result.Lyrics;
+        LyricsFlyoutCopyright.Text = result.Copyright ?? string.Empty;
+        SetLyricsFlyoutState(LyricsFlyoutState.Content, null);
+    }
+
+    /// <summary>
+    /// One visible surface per state: the lyrics body, or the status
+    /// stack (spinner only while loading, Retry only on failure) —
+    /// the panel always says what happened, never a blank.
+    /// </summary>
+    private void SetLyricsFlyoutState(LyricsFlyoutState state, string? message)
+    {
+        bool hasLyrics = state == LyricsFlyoutState.Content;
+        LyricsFlyoutText.Visibility = hasLyrics ? Visibility.Visible : Visibility.Collapsed;
+        if (!hasLyrics)
+        {
+            LyricsFlyoutText.Text = string.Empty;
+            LyricsFlyoutCopyright.Text = string.Empty;
+        }
+
+        LyricsFlyoutStatus.Visibility = hasLyrics ? Visibility.Collapsed : Visibility.Visible;
+        bool loading = state == LyricsFlyoutState.Loading;
+        LyricsFlyoutProgress.IsActive = loading;
+        LyricsFlyoutProgress.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
+        LyricsFlyoutStatusText.Text = message ?? string.Empty;
+        LyricsFlyoutRetry.Visibility = state == LyricsFlyoutState.Error
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -602,6 +920,28 @@ public sealed partial class MainWindow : Window
             case nameof(PlayerViewModel.CurrentTitle):
             case nameof(PlayerViewModel.CurrentArtist):
                 UpdateNowPlayingName();
+                break;
+            case nameof(PlayerViewModel.CurrentSong):
+                // Track changed: an open queue flyout re-pins its
+                // now-playing block; an open lyrics flyout refetches
+                // for the new song.
+                if (_queueFlyoutOpen)
+                {
+                    SyncQueueFlyout();
+                }
+
+                if (_lyricsFlyoutOpen)
+                {
+                    _ = RefreshLyricsFlyoutAsync();
+                }
+
+                break;
+            case nameof(PlayerViewModel.CurrentQueueIndex):
+                if (_queueFlyoutOpen)
+                {
+                    SyncQueueFlyout();
+                }
+
                 break;
             case nameof(PlayerViewModel.CurrentArtworkSource):
                 UpdateArtworkPlaceholder();
@@ -697,9 +1037,11 @@ public sealed partial class MainWindow : Window
     /// <summary>Idle LCD: a neutral artwork placeholder tile stands in for missing art (V-01).</summary>
     private void UpdateArtworkPlaceholder()
     {
-        ArtworkPlaceholder.Visibility = Player.CurrentArtworkSource is null
+        Visibility visibility = Player.CurrentArtworkSource is null
             ? Visibility.Visible
             : Visibility.Collapsed;
+        ArtworkPlaceholder.Visibility = visibility;
+        QueueNowArtworkPlaceholder.Visibility = visibility;
     }
 
     // ------------------------------------------------------------------
