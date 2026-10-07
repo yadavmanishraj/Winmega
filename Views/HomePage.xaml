@@ -6,8 +6,9 @@
 
     <!-- Home (HOME_PAGE_DESIGN, approved 2026-10-07): hero over the
          top trending entity, then EVERY section is the same anatomy —
-         header + a 2-row card grid (ItemsWrapGrid, Orientation=
-         Horizontal, MaximumRowsOrColumns=2) that scrolls horizontally
+         header + a 2-row card band (ScrollViewer + ItemsRepeater,
+         UniformGridLayout Orientation=Vertical,
+         MaximumRowsOrColumns=2) that scrolls horizontally
          as a whole. Two card types only: EntityCardTemplate (200px
          artwork) and the 304x72 song cards (SongCardTemplate for real
          songs, TrendingCardTemplate for HomeItemViewModel rows).
@@ -15,25 +16,51 @@
          code-behind (SectionScroller); section grids cap at 30 items
          (HomeViewModel fill). Templates are page-local (D1: bindings
          in a merged-dictionary template never evaluated). Sections
-         hide entirely when empty; errors are an InfoBar with Retry. -->
+         hide entirely when empty; errors are an InfoBar with Retry.
+         BAND HEIGHT IS LOAD-BEARING: each section's ScrollViewer
+         Height is pinned by code-behind to its row count of cells
+         plus the inter-row allowance — entity sections (New
+         albums, Charts, Top playlists, Discover) are 2 ROWS
+         (band = 2 x cell + 16), song sections (Jump back in,
+         Trending) are 3 ROWS (band = 296 at every tier) — and the
+         ItemsRepeater's UniformGridLayout (Orientation=Vertical,
+         MaximumRowsOrColumns = the row count) flows items
+         down-then-right into horizontal scroll.
+         WARNING — the layout's Orientation convention is the
+         INVERSE of ItemsWrapGrid's: here Vertical + a row cap is
+         what produces the horizontal band (proven by UIA geometry,
+         out15); "Horizontal" flows right-then-down in columns.
+         History: a GridView + ItemsWrapGrid rendered 2 columns
+         streaming down in this app even with the band height
+         pinned (out14 + out15 proofs) — do not go back. -->
     <Page.Resources>
-        <!-- Entity card: square-ish artwork frame (tint placeholder +
+        <!-- Entity card: artwork frame (tint placeholder +
              glyph behind the image) over a 2-line title and 1-line
-             subtitle. The cell is artwork + 16 (ItemsWrapGrid sizes
-             come from code-behind per responsive tier); the artwork
-             row absorbs the text block's height variance so art stays
-             ~square. The play disc is hover-revealed by code-behind
-             (EntityGrid_ContainerContentChanging); it starts visible
-             so a wiring miss degrades to an always-visible button. -->
+             subtitle. The cell is artwork + 16 (cell sizes
+             come from code-behind per responsive tier); the frame
+             is a STRICT square — Width/Height are pinned to the
+             tier's side (200/176/152) by code-behind
+             (ApplyArtworkFrameSize; the XAML values are the tier-0
+             default). It must NOT go back to a star-sized row: the
+             frame's height drifted from its width and UniformToFill
+             cropped the art into a rectangle (Manish, 2026-10-07).
+             The play disc is hover-revealed by code-behind
+             (EntityRepeater_ElementPrepared); it starts visible
+             so a wiring miss degrades to an always-visible button.
+             Card activation is the root's Tapped (EntityCard_Tapped);
+             the disc's own Command plays without navigating. -->
         <DataTemplate x:Key="EntityCardTemplate" x:DataType="vm:HomeItemViewModel">
-            <Grid Padding="8,0,8,0">
+            <Grid Padding="8,0,8,0" Tapped="EntityCard_Tapped" KeyDown="Card_KeyDown"
+                  IsTabStop="True" UseSystemFocusVisuals="True">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Border Grid.Row="0" CornerRadius="8"
-                        Background="{ThemeResource HeroTintBrush}">
+                <Border Grid.Row="0" CornerRadius="8" Width="200" Height="200"
+                        HorizontalAlignment="Left"
+                        Background="{ThemeResource HeroTintBrush}"
+                        AutomationProperties.AutomationId="HomeEntityArtwork">
                     <Grid>
                         <FontIcon Glyph="&#xE8D6;" FontSize="40"
                                   HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -65,10 +92,12 @@
 
         <!-- Song card (Jump back in): 304x72 card surface in a 320x88
              cell. Artwork carries the SongRow-style hover play disc;
-             the card itself plays through the page's ItemClick. -->
+             the card itself plays through its root Tapped
+             (SongCard_Tapped). -->
         <DataTemplate x:Key="SongCardTemplate" x:DataType="vm:SongItemViewModel">
-            <Grid Padding="8">
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            <Grid Padding="8" Tapped="SongCard_Tapped" KeyDown="Card_KeyDown"
+                  IsTabStop="True" UseSystemFocusVisuals="True">
+                <Border Height="72" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1" CornerRadius="8">
                     <Grid Padding="8,0,12,0" ColumnSpacing="12">
@@ -119,8 +148,9 @@
              keeps the row template's always-visible play button —
              trending items carry no duration. -->
         <DataTemplate x:Key="TrendingCardTemplate" x:DataType="vm:HomeItemViewModel">
-            <Grid Padding="8">
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            <Grid Padding="8" Tapped="EntityCard_Tapped" KeyDown="Card_KeyDown"
+                  IsTabStop="True" UseSystemFocusVisuals="True">
+                <Border Height="72" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1" CornerRadius="8">
                     <Grid Padding="8,0,4,0" ColumnSpacing="12">
@@ -162,14 +192,6 @@
             </Grid>
         </DataTemplate>
 
-        <!-- Section grid containers sit flush: the templates carry
-             the only inset (16px card gaps baked into the cells). -->
-        <Style x:Key="HomeGridItemStyle" TargetType="GridViewItem">
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Margin" Value="0" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Stretch" />
-        </Style>
     </Page.Resources>
 
     <ScrollViewer>
@@ -262,24 +284,22 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <GridView x:Name="JumpBackInGrid"
-                          ItemsSource="{x:Bind ViewModel.JumpBackInItems, Mode=OneWay}"
-                          ItemTemplate="{StaticResource SongCardTemplate}"
-                          ItemContainerStyle="{StaticResource HomeGridItemStyle}"
-                          SelectionMode="None" IsItemClickEnabled="True"
-                          ItemClick="SongRow_ItemClick"
-                          ScrollViewer.HorizontalScrollMode="Enabled"
-                          ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                          ScrollViewer.VerticalScrollMode="Disabled"
-                          ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                          AutomationProperties.AutomationId="HomeJumpBackInList">
-                    <GridView.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2"
-                                           ItemWidth="320" ItemHeight="88" />
-                        </ItemsPanelTemplate>
-                    </GridView.ItemsPanel>
-                </GridView>
+                <ScrollViewer x:Name="JumpBackInScroller" Height="296"
+                              HorizontalScrollMode="Enabled"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollMode="Disabled"
+                              VerticalScrollBarVisibility="Disabled"
+                              ZoomMode="Disabled"
+                              AutomationProperties.AutomationId="HomeJumpBackInList">
+                    <ItemsRepeater x:Name="JumpBackInRepeater"
+                                   ItemsSource="{x:Bind ViewModel.JumpBackInItems, Mode=OneWay}"
+                                   ItemTemplate="{StaticResource SongCardTemplate}">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="3"
+                                               MinItemWidth="320" MinItemHeight="88" />
+                        </ItemsRepeater.Layout>
+                    </ItemsRepeater>
+                </ScrollViewer>
             </StackPanel>
 
             <!-- Trending songs — song-card chrome, entity items -->
@@ -303,24 +323,22 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <GridView x:Name="TrendingGrid"
-                          ItemsSource="{x:Bind ViewModel.TrendingItems, Mode=OneWay}"
-                          ItemTemplate="{StaticResource TrendingCardTemplate}"
-                          ItemContainerStyle="{StaticResource HomeGridItemStyle}"
-                          SelectionMode="None" IsItemClickEnabled="True"
-                          ItemClick="EntityList_ItemClick"
-                          ScrollViewer.HorizontalScrollMode="Enabled"
-                          ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                          ScrollViewer.VerticalScrollMode="Disabled"
-                          ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                          AutomationProperties.AutomationId="HomeTrendingList">
-                    <GridView.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2"
-                                           ItemWidth="320" ItemHeight="88" />
-                        </ItemsPanelTemplate>
-                    </GridView.ItemsPanel>
-                </GridView>
+                <ScrollViewer x:Name="TrendingScroller" Height="296"
+                              HorizontalScrollMode="Enabled"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollMode="Disabled"
+                              VerticalScrollBarVisibility="Disabled"
+                              ZoomMode="Disabled"
+                              AutomationProperties.AutomationId="HomeTrendingList">
+                    <ItemsRepeater x:Name="TrendingRepeater"
+                                   ItemsSource="{x:Bind ViewModel.TrendingItems, Mode=OneWay}"
+                                   ItemTemplate="{StaticResource TrendingCardTemplate}">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="3"
+                                               MinItemWidth="320" MinItemHeight="88" />
+                        </ItemsRepeater.Layout>
+                    </ItemsRepeater>
+                </ScrollViewer>
             </StackPanel>
 
             <!-- New albums — entity cards -->
@@ -344,25 +362,24 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <GridView x:Name="NewAlbumsGrid"
-                          ItemsSource="{x:Bind ViewModel.NewAlbumItems, Mode=OneWay}"
-                          ItemTemplate="{StaticResource EntityCardTemplate}"
-                          ItemContainerStyle="{StaticResource HomeGridItemStyle}"
-                          SelectionMode="None" IsItemClickEnabled="True"
-                          ItemClick="EntityList_ItemClick"
-                          ContainerContentChanging="EntityGrid_ContainerContentChanging"
-                          ScrollViewer.HorizontalScrollMode="Enabled"
-                          ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                          ScrollViewer.VerticalScrollMode="Disabled"
-                          ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                          AutomationProperties.AutomationId="HomeNewAlbumsGrid">
-                    <GridView.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2"
-                                           ItemWidth="216" ItemHeight="268" />
-                        </ItemsPanelTemplate>
-                    </GridView.ItemsPanel>
-                </GridView>
+                <ScrollViewer x:Name="NewAlbumsScroller" Height="552"
+                              HorizontalScrollMode="Enabled"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollMode="Disabled"
+                              VerticalScrollBarVisibility="Disabled"
+                              ZoomMode="Disabled"
+                              AutomationProperties.AutomationId="HomeNewAlbumsGrid">
+                    <ItemsRepeater x:Name="NewAlbumsRepeater"
+                                   ItemsSource="{x:Bind ViewModel.NewAlbumItems, Mode=OneWay}"
+                                   ItemTemplate="{StaticResource EntityCardTemplate}"
+                                   ElementPrepared="EntityRepeater_ElementPrepared"
+                                   ElementClearing="EntityRepeater_ElementClearing">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="2"
+                                               MinItemWidth="216" MinItemHeight="268" />
+                        </ItemsRepeater.Layout>
+                    </ItemsRepeater>
+                </ScrollViewer>
             </StackPanel>
 
             <!-- Charts — entity cards -->
@@ -386,25 +403,24 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <GridView x:Name="ChartsGrid"
-                          ItemsSource="{x:Bind ViewModel.ChartItems, Mode=OneWay}"
-                          ItemTemplate="{StaticResource EntityCardTemplate}"
-                          ItemContainerStyle="{StaticResource HomeGridItemStyle}"
-                          SelectionMode="None" IsItemClickEnabled="True"
-                          ItemClick="EntityList_ItemClick"
-                          ContainerContentChanging="EntityGrid_ContainerContentChanging"
-                          ScrollViewer.HorizontalScrollMode="Enabled"
-                          ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                          ScrollViewer.VerticalScrollMode="Disabled"
-                          ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                          AutomationProperties.AutomationId="HomeChartsGrid">
-                    <GridView.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2"
-                                           ItemWidth="216" ItemHeight="268" />
-                        </ItemsPanelTemplate>
-                    </GridView.ItemsPanel>
-                </GridView>
+                <ScrollViewer x:Name="ChartsScroller" Height="552"
+                              HorizontalScrollMode="Enabled"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollMode="Disabled"
+                              VerticalScrollBarVisibility="Disabled"
+                              ZoomMode="Disabled"
+                              AutomationProperties.AutomationId="HomeChartsGrid">
+                    <ItemsRepeater x:Name="ChartsRepeater"
+                                   ItemsSource="{x:Bind ViewModel.ChartItems, Mode=OneWay}"
+                                   ItemTemplate="{StaticResource EntityCardTemplate}"
+                                   ElementPrepared="EntityRepeater_ElementPrepared"
+                                   ElementClearing="EntityRepeater_ElementClearing">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="2"
+                                               MinItemWidth="216" MinItemHeight="268" />
+                        </ItemsRepeater.Layout>
+                    </ItemsRepeater>
+                </ScrollViewer>
             </StackPanel>
 
             <!-- Top playlists — entity cards -->
@@ -428,25 +444,24 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <GridView x:Name="TopPlaylistsGrid"
-                          ItemsSource="{x:Bind ViewModel.TopPlaylistItems, Mode=OneWay}"
-                          ItemTemplate="{StaticResource EntityCardTemplate}"
-                          ItemContainerStyle="{StaticResource HomeGridItemStyle}"
-                          SelectionMode="None" IsItemClickEnabled="True"
-                          ItemClick="EntityList_ItemClick"
-                          ContainerContentChanging="EntityGrid_ContainerContentChanging"
-                          ScrollViewer.HorizontalScrollMode="Enabled"
-                          ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                          ScrollViewer.VerticalScrollMode="Disabled"
-                          ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                          AutomationProperties.AutomationId="HomeTopPlaylistsGrid">
-                    <GridView.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2"
-                                           ItemWidth="216" ItemHeight="268" />
-                        </ItemsPanelTemplate>
-                    </GridView.ItemsPanel>
-                </GridView>
+                <ScrollViewer x:Name="TopPlaylistsScroller" Height="552"
+                              HorizontalScrollMode="Enabled"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollMode="Disabled"
+                              VerticalScrollBarVisibility="Disabled"
+                              ZoomMode="Disabled"
+                              AutomationProperties.AutomationId="HomeTopPlaylistsGrid">
+                    <ItemsRepeater x:Name="TopPlaylistsRepeater"
+                                   ItemsSource="{x:Bind ViewModel.TopPlaylistItems, Mode=OneWay}"
+                                   ItemTemplate="{StaticResource EntityCardTemplate}"
+                                   ElementPrepared="EntityRepeater_ElementPrepared"
+                                   ElementClearing="EntityRepeater_ElementClearing">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="2"
+                                               MinItemWidth="216" MinItemHeight="268" />
+                        </ItemsRepeater.Layout>
+                    </ItemsRepeater>
+                </ScrollViewer>
             </StackPanel>
 
             <!-- Browse discover (channels — shape rules still apply) -->
@@ -470,25 +485,24 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <GridView x:Name="DiscoverGrid"
-                          ItemsSource="{x:Bind ViewModel.DiscoverItems, Mode=OneWay}"
-                          ItemTemplate="{StaticResource EntityCardTemplate}"
-                          ItemContainerStyle="{StaticResource HomeGridItemStyle}"
-                          SelectionMode="None" IsItemClickEnabled="True"
-                          ItemClick="EntityList_ItemClick"
-                          ContainerContentChanging="EntityGrid_ContainerContentChanging"
-                          ScrollViewer.HorizontalScrollMode="Enabled"
-                          ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                          ScrollViewer.VerticalScrollMode="Disabled"
-                          ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                          AutomationProperties.AutomationId="HomeDiscoverGrid">
-                    <GridView.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2"
-                                           ItemWidth="216" ItemHeight="268" />
-                        </ItemsPanelTemplate>
-                    </GridView.ItemsPanel>
-                </GridView>
+                <ScrollViewer x:Name="DiscoverScroller" Height="552"
+                              HorizontalScrollMode="Enabled"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollMode="Disabled"
+                              VerticalScrollBarVisibility="Disabled"
+                              ZoomMode="Disabled"
+                              AutomationProperties.AutomationId="HomeDiscoverGrid">
+                    <ItemsRepeater x:Name="DiscoverRepeater"
+                                   ItemsSource="{x:Bind ViewModel.DiscoverItems, Mode=OneWay}"
+                                   ItemTemplate="{StaticResource EntityCardTemplate}"
+                                   ElementPrepared="EntityRepeater_ElementPrepared"
+                                   ElementClearing="EntityRepeater_ElementClearing">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout Orientation="Vertical" MaximumRowsOrColumns="2"
+                                               MinItemWidth="216" MinItemHeight="268" />
+                        </ItemsRepeater.Layout>
+                    </ItemsRepeater>
+                </ScrollViewer>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>
