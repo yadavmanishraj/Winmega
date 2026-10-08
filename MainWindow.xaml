@@ -124,7 +124,7 @@
                             ToolTipService.ToolTip="Previous"
                             AutomationProperties.AutomationId="TransportPrevious"
                             AutomationProperties.Name="Previous">
-                        <SymbolIcon Symbol="Previous" Width="14" Height="14"
+                        <SymbolIcon x:Name="PreviousIcon" Symbol="Previous" Width="14" Height="14"
                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                     </Button>
                     <Button Style="{StaticResource StripTransportButtonStyle}"
