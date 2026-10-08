@@ -65,6 +65,14 @@ public sealed partial class MainWindow : Window
     private RectInt32[] _passthroughRects = Array.Empty<RectInt32>();
     private bool _queueFlyoutOpen;
     private bool _lyricsFlyoutOpen;
+
+    // Transport state painting (UpdateTransportState): the last
+    // shuffle/repeat states actually painted, so the per-tick VM
+    // syncs don't repaint state already shown (the panel's
+    // change-guard discipline). A theme flip resets both — the
+    // painted brushes are theme evaluations and must be re-read.
+    private bool? _lastShufflePainted;
+    private RepeatMode? _lastRepeatPainted;
     private CancellationTokenSource? _lyricsFlyoutCts;
     private string? _lyricsFlyoutSongId;
 
@@ -130,6 +138,12 @@ public sealed partial class MainWindow : Window
         // on a 200%-scaled display and push the LCD well offscreen.
 
         _panelRequestedWidth = ReadPanelWidth();
+
+        // A runtime theme flip re-evaluates every {ThemeResource}
+        // in the tree, but the transport brushes UpdateTransportState
+        // assigned from code are snapshots — repaint them under the
+        // new theme (the handler resets the change guards).
+        RootGrid.ActualThemeChanged += RootGrid_ActualThemeChanged;
 
         ContentFrame.NavigationFailed += ContentFrame_NavigationFailed;
         ViewModel.Playlists.CollectionChanged += OnPlaylistsChanged;
@@ -211,7 +225,7 @@ public sealed partial class MainWindow : Window
         CaptionInsetSpacer.Width = AppWindow.TitleBar.RightInset / scale;
 
         // ActualTheme is only settled once the tree is live.
-        UpdateTransportState();
+        UpdateTransportState(force: true);
         UpdatePassthroughRegions();
     }
 
@@ -1307,64 +1321,99 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Shuffle/repeat on-state (spec §3 + AUDIT_2 A-4): filled disc +
-    /// green glyph + a dot under the glyph, so state reads by shape
-    /// as well as colour, and the state is spelled out in the
-    /// accessible name. The buttons carry no background (Manish,
-    /// 2026-10-08): state reads from the accent glyph + dot alone.
+    /// Shuffle/repeat on-state: accent glyph + a dot under the
+    /// glyph, so state reads by shape as well as colour, and the
+    /// state is spelled out in the accessible name. The buttons
+    /// carry no background (Manish, 2026-10-08): state reads from
+    /// the accent glyph + dot alone. Painting is change-guarded
+    /// (the panel's discipline): this sync runs on VM ticks and
+    /// must not repaint state it already shows — a theme flip
+    /// passes <paramref name="force"/> (see the ActualThemeChanged
+    /// handler), because the painted brushes are theme snapshots.
     /// </summary>
-    private void UpdateTransportState()
+    private void UpdateTransportState(bool force = false)
     {
-        Brush? activeBrush = GetTransportActiveBrush();
-
-        // Off-state glyph = explicit primary brush, never null:
-        // assigning null here left the shuffle/repeat glyphs
-        // unpainted in the strip (rendered proof 2026-10-08 — the
-        // two icons whose foreground came only from this method
-        // were invisible while prev/next, explicit in XAML,
-        // rendered).
-        Brush? primaryBrush = GetThemeBrush("TextFillColorPrimaryBrush");
-
-        ShuffleIcon.Foreground = Player.IsShuffle ? activeBrush : primaryBrush;
-        ShuffleStateDot.Visibility = Player.IsShuffle ? Visibility.Visible : Visibility.Collapsed;
-        AutomationProperties.SetName(ShuffleButton,
-            Player.IsShuffle ? Res.Get("ShuffleOn") : Res.Get("ShuffleOff"));
-
-        bool repeatOn = Player.RepeatMode != RepeatMode.Off;
-        RepeatIcon.Foreground = repeatOn ? activeBrush : primaryBrush;
-        RepeatStateDot.Visibility = repeatOn ? Visibility.Visible : Visibility.Collapsed;
-        AutomationProperties.SetName(RepeatButton, Player.RepeatMode switch
+        if (force || _lastShufflePainted != Player.IsShuffle)
         {
-            RepeatMode.One => Res.Get("RepeatOne"),
-            RepeatMode.All => Res.Get("RepeatAll"),
-            _ => Res.Get("RepeatOff"),
-        });
+            _lastShufflePainted = Player.IsShuffle;
+
+            // Off-state glyph = explicit primary brush, never null:
+            // assigning null here left the shuffle/repeat glyphs
+            // unpainted in the strip (rendered proof 2026-10-08 —
+            // the two icons whose foreground came only from this
+            // method were invisible while prev/next, explicit in
+            // XAML, rendered).
+            //
+            // The brush is MIRRORED off the Previous icon — the
+            // sibling UpdateTransportState never touches. Its
+            // {ThemeResource TextFillColorPrimaryBrush} foreground
+            // is evaluated against the element's ActualTheme, so
+            // the mirrored value is by construction the same ink
+            // prev/next show in the current theme. Resolving the
+            // key from Application.Current.Resources instead (the
+            // old code) follows the APPLICATION's RequestedTheme —
+            // pinned Dark in the App constructor, because runtime
+            // switching applies to the root element — so the strip
+            // painted the dark theme's white glyph in the light
+            // theme and shuffle/repeat rendered paler than
+            // prev/next (rendered proof out29, 2026-10-08).
+            Brush? primaryBrush = PreviousIcon.Foreground
+                ?? GetThemeBrush("TextFillColorPrimaryBrush");
+            ShuffleIcon.Foreground = Player.IsShuffle ? GetTransportActiveBrush() : primaryBrush;
+            ShuffleStateDot.Visibility = Player.IsShuffle ? Visibility.Visible : Visibility.Collapsed;
+            AutomationProperties.SetName(ShuffleButton,
+                Player.IsShuffle ? Res.Get("ShuffleOn") : Res.Get("ShuffleOff"));
+        }
+
+        if (force || _lastRepeatPainted != Player.RepeatMode)
+        {
+            _lastRepeatPainted = Player.RepeatMode;
+            Brush? primaryBrush = PreviousIcon.Foreground
+                ?? GetThemeBrush("TextFillColorPrimaryBrush");
+            bool repeatOn = Player.RepeatMode != RepeatMode.Off;
+            RepeatIcon.Foreground = repeatOn ? GetTransportActiveBrush() : primaryBrush;
+            RepeatStateDot.Visibility = repeatOn ? Visibility.Visible : Visibility.Collapsed;
+            AutomationProperties.SetName(RepeatButton, Player.RepeatMode switch
+            {
+                RepeatMode.One => Res.Get("RepeatOne"),
+                RepeatMode.All => Res.Get("RepeatAll"),
+                _ => Res.Get("RepeatOff"),
+            });
+        }
     }
+
+    private void RootGrid_ActualThemeChanged(FrameworkElement sender, object args) =>
+        UpdateTransportState(force: true);
 
     private Brush? GetTransportActiveBrush() => GetThemeBrush("TransportActiveBrush");
 
     private Brush? GetThemeBrush(string key)
     {
+        // App-defined brushes live in App.xaml's theme dictionaries
+        // (spec §4: theme resources only) with DIFFERENT values per
+        // theme — consult the dictionary matching the shell's
+        // ACTUAL theme FIRST, so a runtime Light/Dark switch in
+        // Settings recolours the shell too. (The application-
+        // resources lookup below follows Application.RequestedTheme
+        // — pinned Dark at startup — and would hand back the dark
+        // theme's value in the light theme; it used to run first
+        // and short-circuited this branch for every key it could
+        // find, TransportActiveBrush included.)
+        string dictionaryKey = RootGrid.ActualTheme == ElementTheme.Light ? "Light" : "Dark";
+        if (Application.Current.Resources.ThemeDictionaries.TryGetValue(dictionaryKey, out object? value)
+            && value is ResourceDictionary dictionary
+            && dictionary.TryGetValue(key, out object? themed)
+            && themed is Brush themedBrush)
+        {
+            return themedBrush;
+        }
+
         // Framework theme brushes (SystemFillColor*, SubtleFillColor*)
-        // resolve straight off the application resources, which apply
-        // the active theme dictionary.
+        // resolve straight off the application resources.
         if (Application.Current.Resources.TryGetValue(key, out object? direct)
             && direct is Brush directBrush)
         {
             return directBrush;
-        }
-
-        // App-defined brushes live in App.xaml's theme dictionaries
-        // (spec §4: theme resources only); pick the dictionary
-        // matching the shell's actual theme so a runtime Light/Dark
-        // switch in Settings recolours the shell too.
-        string dictionaryKey = RootGrid.ActualTheme == ElementTheme.Light ? "Light" : "Dark";
-        if (Application.Current.Resources.ThemeDictionaries.TryGetValue(dictionaryKey, out object? value)
-            && value is ResourceDictionary dictionary
-            && dictionary.TryGetValue(key, out object? brush)
-            && brush is Brush result)
-        {
-            return result;
         }
 
         return null;

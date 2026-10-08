@@ -167,8 +167,17 @@
                  differentiate — while Mica supplies the window backdrop.
                  HighContrast contains ONLY SystemColor* resources. -->
 
-            <!-- Strip transport (shell): the 40px disc language the
-                 Now Playing page speaks at 48px (AUDIT_2 V-02/03). -->
+            <!-- Strip transport (shell): bare glyphs at a 40px
+                 target — no button backgrounds anywhere; only
+                 play/pause keeps its filled accent disc (Manish,
+                 2026-10-08). The ToggleButton (shuffle) carries
+                 the same minimal template as the Now Playing
+                 panel's PanelTransportToggleStyle: the stock
+                 template paints a full accent disc in the Checked
+                 state, which resurrected the background exactly
+                 when shuffle turned on (rendered proof out29,
+                 2026-10-08). On-state reads from the accent glyph
+                 + state dot, painted by UpdateTransportState. -->
         <Style x:Key="StripTransportButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="40" />
             <Setter Property="Height" Value="40" />
@@ -186,6 +195,44 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="UseSystemFocusVisuals" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid x:Name="RootGrid" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              ContentTransitions="{TemplateBinding ContentTransitions}"
+                                              Padding="{TemplateBinding Padding}" />
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver" />
+                                    <VisualState x:Name="Pressed" />
+                                    <VisualState x:Name="Checked" />
+                                    <VisualState x:Name="CheckedPointerOver" />
+                                    <VisualState x:Name="CheckedPressed" />
+                                    <VisualState x:Name="Indeterminate" />
+                                    <VisualState x:Name="Disabled">
+                                        <VisualState.Setters>
+                                            <Setter Target="RootGrid.Opacity" Value="0.4" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="CheckedDisabled">
+                                        <VisualState.Setters>
+                                            <Setter Target="RootGrid.Opacity" Value="0.4" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         </ResourceDictionary>
     </Application.Resources>

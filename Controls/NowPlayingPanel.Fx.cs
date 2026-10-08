@@ -277,8 +277,11 @@ public sealed partial class NowPlayingPanel
     // reads as the track's colour and nothing else. Deep/Base/Lift
     // are the background ramp (gradient stops Deep → Base → Deep,
     // the Off-mode flat brush is Base, the artwork placeholder is
-    // Lift); the blob/particle/glow colours are their palette
-    // roles tempered 40% toward Base (see ComputeFamily).
+    // Lift); the blobs derive from that same ramp — Lift and Deep
+    // with at most a 25% admixture of their old palette roles —
+    // the particles keep their roles tempered 40% toward Base,
+    // and the glow is the Vibrant lightened toward white, then
+    // tempered toward Base (see ComputeFamily).
     // ------------------------------------------------------------------
 
     private sealed record FxColorFamily(
@@ -308,11 +311,27 @@ public sealed partial class NowPlayingPanel
     /// background is the track's Dominant colour, LIGHTER under
     /// the light theme (lerped toward white — Base 0.80, Deep
     /// 0.68, Lift 0.90) and DARKER under the dark theme (scaled —
-    /// Base ×0.30, Deep ×0.20, Lift ×0.48). Blob, particle and
-    /// glow colours keep their Vibrant/Mid/Dominant roles but are
-    /// blended 40% toward Base, so a cover whose vibrant accent is
-    /// a contrasting hue cannot turn the card into a rainbow: one
-    /// colour family throughout.
+    /// Base ×0.30, Deep ×0.20, Lift ×0.48). Particle colours keep
+    /// their Vibrant/Mid/Dominant roles blended 40% toward Base,
+    /// so a cover whose vibrant accent is a contrasting hue
+    /// cannot turn the card into a rainbow.
+    ///
+    /// Two tunings from the rendered proof (out29/out30,
+    /// 2026-10-08), one root: colours straying from the Dominant
+    /// family. (1) The BLOBS used to be the roles at 60% strength;
+    /// the Mid-role blob is a wide, slow wash, and on the plum
+    /// cover it dragged the open background ~40° of hue away from
+    /// the cover's dominant (289.8° measured vs 330.4°) in both
+    /// themes. The blobs now derive from the Dominant ramp
+    /// itself — BlobA from Lift, BlobB from Deep — with the old
+    /// roles surviving only as a 25% admixture, capping the hue
+    /// pull at roughly a quarter of the role gap. (2) The GLOW
+    /// was the tempered Vibrant, which on dark covers lands at
+    /// nearly the background's own value — a halo no lighter than
+    /// its surround is invisible (ring Δ 0.008 measured). The
+    /// glow is now the Vibrant lightened 25% toward white BEFORE
+    /// the 40% Base blend, so the halo is lighter than the card
+    /// it rings by construction.
     /// </summary>
     private FxColorFamily ComputeFamily(ArtworkPalette palette)
     {
@@ -337,12 +356,12 @@ public sealed partial class NowPlayingPanel
             deep,
             baseColor,
             lift,
-            LerpColor(palette.Vibrant, baseColor, 0.40f),
-            LerpColor(palette.Mid, baseColor, 0.40f),
+            LerpColor(lift, palette.Vibrant, 0.25f),
+            LerpColor(deep, palette.Mid, 0.25f),
             LerpColor(palette.Vibrant, baseColor, 0.40f),
             LerpColor(palette.Mid, baseColor, 0.40f),
             LerpColor(palette.Dominant, baseColor, 0.40f),
-            LerpColor(palette.Vibrant, baseColor, 0.40f));
+            LerpColor(LerpColor(palette.Vibrant, White, 0.25f), baseColor, 0.40f));
     }
 
     /// <summary>
@@ -578,9 +597,17 @@ public sealed partial class NowPlayingPanel
 
         // Three shared brushes (one per palette role) recoloured in
         // place on track change — sprites persist, colours swap.
+        // Strength tuning (rendered proof out29/out30, 2026-10-08):
+        // the first tuning rendered but was imperceptible at normal
+        // contrast — peak brush alpha 160/255 and 0.75 sprite
+        // opacity compounded to ~0.47 over the background. The
+        // ladder below (217/190/163) with 0.95 sprite opacity
+        // compounds to ~0.81 for the brightest role; bokeh grows
+        // and doubles its presence (0.16 → 0.30). Density is NOT
+        // part of the fix — the field stays 48 sprites.
         ArtworkPalette palette = _fallbackPalette!;
         Color[] roleColors = { palette.Vibrant, palette.Mid, palette.Dominant };
-        byte[] roleAlphas = { 160, 140, 120 };
+        byte[] roleAlphas = { 217, 190, 163 };
         var brushes = new CompositionRadialGradientBrush[3];
         _particleStops = new CompositionColorGradientStop[3][];
         for (int i = 0; i < brushes.Length; i++)
@@ -595,8 +622,8 @@ public sealed partial class NowPlayingPanel
         for (int i = 0; i < count; i++)
         {
             bool bokeh = i % 5 == 0;
-            float diameter = bokeh ? 22f + ((float)random.NextDouble() * 20f) : 3f + ((float)random.NextDouble() * 3.5f);
-            float peak = bokeh ? 0.16f : 0.75f;
+            float diameter = bokeh ? 26f + ((float)random.NextDouble() * 26f) : 4f + ((float)random.NextDouble() * 5f);
+            float peak = bokeh ? 0.30f : 0.95f;
             float x = (float)random.NextDouble() * FxReferenceWidth;
             double drift = 560 + (random.NextDouble() * 220);
             double period = 24 + (random.NextDouble() * 22);
@@ -696,7 +723,7 @@ public sealed partial class NowPlayingPanel
         brush.EllipseRadius = new Vector2(0.5f, 0.5f);
         Color glowColor = _fallbackPalette!.Vibrant;
         var glowStop0 = compositor.CreateColorGradientStop(0f, WithAlpha(glowColor, 120));
-        var glowStop1 = compositor.CreateColorGradientStop(0.70f, WithAlpha(glowColor, 190));
+        var glowStop1 = compositor.CreateColorGradientStop(0.70f, WithAlpha(glowColor, 225));
         var glowStop2 = compositor.CreateColorGradientStop(1f, WithAlpha(glowColor, 0));
         brush.ColorStops.Add(glowStop0);
         brush.ColorStops.Add(glowStop1);
@@ -740,8 +767,13 @@ public sealed partial class NowPlayingPanel
             scaleExpr.SetReferenceParameter("props", _pulseProps);
             sprite.StartAnimation("Scale", scaleExpr);
 
+            // Breath swing 0.35 → 0.95 at full amplitude (was
+            // 0.45 → 0.80): with the ring's peak stop now at alpha
+            // 225 and the glow colour lightened (ComputeFamily),
+            // the wider swing is what makes the breath read at
+            // normal contrast on dark covers.
             var opacityExpr = compositor.CreateExpressionAnimation(
-                "0.45f + 0.35f * props.Amplitude * (0.5f + 0.5f * Sin(props.Phase * 6.2831853f))");
+                "0.35f + 0.60f * props.Amplitude * (0.5f + 0.5f * Sin(props.Phase * 6.2831853f))");
             opacityExpr.SetReferenceParameter("props", _pulseProps);
             sprite.StartAnimation("Opacity", opacityExpr);
         }
@@ -840,15 +872,19 @@ public sealed partial class NowPlayingPanel
         SetStops(_blobBStops, WithAlpha(family.BlobB, 170), WithAlpha(family.BlobB, 0));
         if (_particleStops is not null)
         {
-            SetStops(_particleStops[0], WithAlpha(family.ParticleA, 160), WithAlpha(family.ParticleA, 0));
-            SetStops(_particleStops[1], WithAlpha(family.ParticleB, 140), WithAlpha(family.ParticleB, 0));
-            SetStops(_particleStops[2], WithAlpha(family.ParticleC, 120), WithAlpha(family.ParticleC, 0));
+            // Alphas match BuildParticles' role ladder — a swap
+            // must not silently revert the strength tuning.
+            SetStops(_particleStops[0], WithAlpha(family.ParticleA, 217), WithAlpha(family.ParticleA, 0));
+            SetStops(_particleStops[1], WithAlpha(family.ParticleB, 190), WithAlpha(family.ParticleB, 0));
+            SetStops(_particleStops[2], WithAlpha(family.ParticleC, 163), WithAlpha(family.ParticleC, 0));
         }
 
         if (_glowStops is not null)
         {
+            // Peak stop alpha matches BuildGlow (225) — a swap
+            // must not revert the ring-strength tuning.
             SetStops(_glowStops,
-                WithAlpha(family.Glow, 120), WithAlpha(family.Glow, 190), WithAlpha(family.Glow, 0));
+                WithAlpha(family.Glow, 120), WithAlpha(family.Glow, 225), WithAlpha(family.Glow, 0));
         }
     }
 
