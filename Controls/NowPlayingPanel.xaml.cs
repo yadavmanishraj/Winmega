@@ -143,15 +143,13 @@ public sealed partial class NowPlayingPanel : UserControl
     /// <summary>Resolves a theme brush by key (the favourite heart's active tint).</summary>
     private Brush? GetThemeBrush(string key)
     {
-        // Framework theme brushes resolve straight off the
-        // application resources (the MainWindow pattern); app-defined
-        // brushes live in the theme dictionaries.
-        if (Application.Current.Resources.TryGetValue(key, out object? direct)
-            && direct is Brush directBrush)
-        {
-            return directBrush;
-        }
-
+        // Consult the dictionary matching the panel's ACTUAL theme
+        // FIRST (the strip's cured pattern): the application-
+        // resources lookup follows Application.RequestedTheme —
+        // pinned Dark at startup — and hands back the dark theme's
+        // brush in the light theme. It ran first here and left the
+        // panel's shuffle/repeat glyphs white-on-light (rendered
+        // proof out33, 2026-10-08).
         string dictionaryKey = ActualTheme == ElementTheme.Light ? "Light" : "Dark";
         if (Application.Current.Resources.ThemeDictionaries.TryGetValue(dictionaryKey, out object? value)
             && value is ResourceDictionary dictionary
@@ -159,6 +157,15 @@ public sealed partial class NowPlayingPanel : UserControl
             && brush is Brush result)
         {
             return result;
+        }
+
+        // Framework theme brushes resolve straight off the
+        // application resources; app-defined brushes live in the
+        // theme dictionaries.
+        if (Application.Current.Resources.TryGetValue(key, out object? direct)
+            && direct is Brush directBrush)
+        {
+            return directBrush;
         }
 
         return null;
@@ -212,10 +219,15 @@ public sealed partial class NowPlayingPanel : UserControl
             // a null Foreground leaves the SymbolIcon unpainted
             // (invisible) — the strip's proven defect (proof
             // 2026-10-08), reintroduced here and caught by Manish's
-            // hands the same day.
+            // hands the same day. The brush is MIRRORED from
+            // PreviousIcon, whose {ThemeResource} foreground is
+            // evaluated live in the visual tree — a code-side
+            // resource lookup follows the app's pinned Dark theme
+            // and returned white ink in the Light theme (proof
+            // out33, 2026-10-08; the strip's cured pattern).
             ShuffleIcon.Foreground = on
                 ? GetThemeBrush("TransportActiveBrush")
-                : GetThemeBrush("TextFillColorPrimaryBrush");
+                : PreviousIcon.Foreground ?? GetThemeBrush("TextFillColorPrimaryBrush");
             ShuffleStateDot.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
             AutomationProperties.SetName(ShuffleButton, on ? "Shuffle on" : "Shuffle off");
         }
@@ -226,7 +238,7 @@ public sealed partial class NowPlayingPanel : UserControl
             bool active = ViewModel.RepeatMode != RepeatMode.Off;
             RepeatIcon.Foreground = active
                 ? GetThemeBrush("TransportActiveBrush")
-                : GetThemeBrush("TextFillColorPrimaryBrush");
+                : PreviousIcon.Foreground ?? GetThemeBrush("TextFillColorPrimaryBrush");
             RepeatStateDot.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
         }
 

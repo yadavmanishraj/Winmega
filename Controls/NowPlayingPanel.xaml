@@ -338,7 +338,8 @@
                             ToolTipService.ToolTip="Previous"
                             AutomationProperties.AutomationId="NowPlayingPrevious"
                             AutomationProperties.Name="Previous track">
-                        <SymbolIcon Symbol="Previous" Width="20" Height="20" />
+                        <SymbolIcon x:Name="PreviousIcon" Symbol="Previous" Width="20" Height="20"
+                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                     </Button>
                     <Button Style="{StaticResource TransportPrimaryButtonStyle}"
                             Command="{x:Bind ViewModel.TogglePlayPauseCommand}"

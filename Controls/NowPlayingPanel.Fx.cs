@@ -234,6 +234,14 @@ public sealed partial class NowPlayingPanel
             _fallbackPalette = FallbackPalette();
         }
 
+        // The transport icons' off-state ink is a theme snapshot
+        // (mirrored from PreviousIcon): repaint it under the new
+        // theme too, or a flip with the panel open leaves the old
+        // theme's ink until the next state toggle.
+        _lastShuffleVisual = null;
+        _lastRepeatVisual = null;
+        RefreshFromViewModel();
+
         if (_fxMode == FxMode.Off)
         {
             ApplyFlatBackground(force: true);
