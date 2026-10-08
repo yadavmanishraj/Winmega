@@ -217,7 +217,7 @@
                          around the artwork; inert in other modes. -->
                     <Grid x:Name="ArtworkHost" Grid.Row="0"
                           HorizontalAlignment="Center">
-                        <Border x:Name="GlowHost" Margin="-64" />
+                        <Border x:Name="GlowHost" Margin="-76" />
                         <Border x:Name="ArtworkPlaceholder" CornerRadius="12"
                                 Background="{ThemeResource LayerFillColorAltBrush}">
                             <SymbolIcon Symbol="MusicInfo" Width="40" Height="40"

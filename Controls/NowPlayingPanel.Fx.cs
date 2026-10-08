@@ -277,8 +277,8 @@ public sealed partial class NowPlayingPanel
     // reads as the track's colour and nothing else. Deep/Base/Lift
     // are the background ramp (gradient stops Deep → Base → Deep,
     // the Off-mode flat brush is Base, the artwork placeholder is
-    // Lift); the blobs derive from that same ramp — Lift and Deep
-    // with at most a 25% admixture of their old palette roles —
+    // Lift); the blobs ARE that ramp — BlobA is Lift, BlobB is
+    // Deep, with zero admixture of their old palette roles —
     // the particles keep their roles tempered 40% toward Base,
     // and the glow is the Vibrant lightened toward white, then
     // tempered toward Base (see ComputeFamily).
@@ -309,29 +309,41 @@ public sealed partial class NowPlayingPanel
     /// <summary>
     /// The background rule (Manish, 2026-10-08): the panel
     /// background is the track's Dominant colour, LIGHTER under
-    /// the light theme (lerped toward white — Base 0.80, Deep
-    /// 0.68, Lift 0.90) and DARKER under the dark theme (scaled —
+    /// the light theme (lerped toward white — Base 0.72, Deep
+    /// 0.60, Lift 0.86) and DARKER under the dark theme (scaled —
     /// Base ×0.30, Deep ×0.20, Lift ×0.48). Particle colours keep
     /// their Vibrant/Mid/Dominant roles blended 40% toward Base,
     /// so a cover whose vibrant accent is a contrasting hue
     /// cannot turn the card into a rainbow.
     ///
-    /// Two tunings from the rendered proof (out29/out30,
-    /// 2026-10-08), one root: colours straying from the Dominant
-    /// family. (1) The BLOBS used to be the roles at 60% strength;
-    /// the Mid-role blob is a wide, slow wash, and on the plum
-    /// cover it dragged the open background ~40° of hue away from
-    /// the cover's dominant (289.8° measured vs 330.4°) in both
-    /// themes. The blobs now derive from the Dominant ramp
-    /// itself — BlobA from Lift, BlobB from Deep — with the old
-    /// roles surviving only as a 25% admixture, capping the hue
-    /// pull at roughly a quarter of the role gap. (2) The GLOW
-    /// was the tempered Vibrant, which on dark covers lands at
-    /// nearly the background's own value — a halo no lighter than
-    /// its surround is invisible (ring Δ 0.008 measured). The
-    /// glow is now the Vibrant lightened 25% toward white BEFORE
-    /// the 40% Base blend, so the halo is lighter than the card
-    /// it rings by construction.
+    /// Two tunings from the rendered proofs (out29/out30, then
+    /// out31, 2026-10-08), one root: colours straying from the
+    /// Dominant family. (1) The BLOBS used to be the roles at 60%
+    /// strength; the Mid-role blob is a wide, slow wash, and on
+    /// the plum cover it dragged the open background ~40° of hue
+    /// away from the cover's dominant (289.8° measured vs 330.4°)
+    /// in both themes. The 25% admixture cap tried next still
+    /// failed the out31 re-proof (dark band 292.8°, light band
+    /// effectively neutral): on this poster both roles are
+    /// blue-heavy, and the blob alphas are high exactly where
+    /// the band is sampled. The blobs are now the ramp itself —
+    /// BlobA IS Lift, BlobB IS Deep, zero admixture — so every
+    /// background pixel is a blend of same-hue colours and the
+    /// field cannot leave the dominant's hue. Mid/Vibrant
+    /// survive only where they belong: the particles and the
+    /// glow. The light mixes also carry less white than before
+    /// (Base 0.80 → 0.72, Deep 0.68 → 0.60, Lift 0.90 → 0.86):
+    /// at 0.80 the plum Base read as neutral grey (band sat
+    /// 0.029); at 0.72 its relative luminance is still 0.755,
+    /// so dark text stays legible while the tint keeps its
+    /// chroma. (2) The GLOW was the tempered Vibrant, which on
+    /// dark covers lands at nearly the background's own value —
+    /// a halo no lighter than its surround is invisible (ring
+    /// Δ 0.008 measured). The glow is the Vibrant lightened
+    /// toward white BEFORE the 40% Base blend — 35% since
+    /// out31, where the breath peak measured 0.039–0.048
+    /// against a ≳0.05 signature — so the halo is lighter than
+    /// the card it rings by construction.
     /// </summary>
     private FxColorFamily ComputeFamily(ArtworkPalette palette)
     {
@@ -341,9 +353,9 @@ public sealed partial class NowPlayingPanel
         Color lift;
         if (ActualTheme == ElementTheme.Light)
         {
-            baseColor = LerpColor(dominant, White, 0.80f);
-            deep = LerpColor(dominant, White, 0.68f);
-            lift = LerpColor(dominant, White, 0.90f);
+            baseColor = LerpColor(dominant, White, 0.72f);
+            deep = LerpColor(dominant, White, 0.60f);
+            lift = LerpColor(dominant, White, 0.86f);
         }
         else
         {
@@ -356,12 +368,12 @@ public sealed partial class NowPlayingPanel
             deep,
             baseColor,
             lift,
-            LerpColor(lift, palette.Vibrant, 0.25f),
-            LerpColor(deep, palette.Mid, 0.25f),
+            lift,
+            deep,
             LerpColor(palette.Vibrant, baseColor, 0.40f),
             LerpColor(palette.Mid, baseColor, 0.40f),
             LerpColor(palette.Dominant, baseColor, 0.40f),
-            LerpColor(LerpColor(palette.Vibrant, White, 0.25f), baseColor, 0.40f));
+            LerpColor(LerpColor(palette.Vibrant, White, 0.35f), baseColor, 0.40f));
     }
 
     /// <summary>
@@ -723,7 +735,7 @@ public sealed partial class NowPlayingPanel
         brush.EllipseRadius = new Vector2(0.5f, 0.5f);
         Color glowColor = _fallbackPalette!.Vibrant;
         var glowStop0 = compositor.CreateColorGradientStop(0f, WithAlpha(glowColor, 120));
-        var glowStop1 = compositor.CreateColorGradientStop(0.70f, WithAlpha(glowColor, 225));
+        var glowStop1 = compositor.CreateColorGradientStop(0.70f, WithAlpha(glowColor, 240));
         var glowStop2 = compositor.CreateColorGradientStop(1f, WithAlpha(glowColor, 0));
         brush.ColorStops.Add(glowStop0);
         brush.ColorStops.Add(glowStop1);
@@ -769,7 +781,7 @@ public sealed partial class NowPlayingPanel
 
             // Breath swing 0.35 → 0.95 at full amplitude (was
             // 0.45 → 0.80): with the ring's peak stop now at alpha
-            // 225 and the glow colour lightened (ComputeFamily),
+            // 240 and the glow colour lightened (ComputeFamily),
             // the wider swing is what makes the breath read at
             // normal contrast on dark covers.
             var opacityExpr = compositor.CreateExpressionAnimation(
@@ -881,10 +893,10 @@ public sealed partial class NowPlayingPanel
 
         if (_glowStops is not null)
         {
-            // Peak stop alpha matches BuildGlow (225) — a swap
+            // Peak stop alpha matches BuildGlow (240) — a swap
             // must not revert the ring-strength tuning.
             SetStops(_glowStops,
-                WithAlpha(family.Glow, 120), WithAlpha(family.Glow, 225), WithAlpha(family.Glow, 0));
+                WithAlpha(family.Glow, 120), WithAlpha(family.Glow, 240), WithAlpha(family.Glow, 0));
         }
     }
 
