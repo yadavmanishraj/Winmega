@@ -29,11 +29,13 @@ namespace Omega.Controls;
 /// treatment otherwise.
 ///
 /// The panel's background colour rule (Manish, 2026-10-08): the
-/// background IS the current track's dominant colour, adjusted
-/// for the app theme — a shade family under the dark theme
-/// (Deep ×0.20 / Base ×0.30 / Lift ×0.48 of Dominant), a tint
-/// family under the light theme (Dominant lerped toward white:
-/// Deep 0.68 / Base 0.80 / Lift 0.90). Every background surface —
+/// background IS the current track's main colour — the palette's
+/// Mid role, the mean tempered by the dominant (see
+/// <see cref="ComputeFamily"/> for why Mid, not Dominant) —
+/// adjusted for the app theme: a shade family under the dark
+/// theme (Deep ×0.20 / Base ×0.30 / Lift ×0.48 of Mid), a tint
+/// family under the light theme (Mid lerped toward white:
+/// Deep 0.60 / Base 0.72 / Lift 0.86). Every background surface —
 /// the FX gradient, blobs, particles, glow, the Off-mode flat
 /// brush, the artwork placeholder — consumes the one family
 /// (<see cref="ComputeFamily"/>), so the whole card reads as a
@@ -308,60 +310,68 @@ public sealed partial class NowPlayingPanel
 
     /// <summary>
     /// The background rule (Manish, 2026-10-08): the panel
-    /// background is the track's Dominant colour, LIGHTER under
-    /// the light theme (lerped toward white — Base 0.72, Deep
-    /// 0.60, Lift 0.86) and DARKER under the dark theme (scaled —
-    /// Base ×0.30, Deep ×0.20, Lift ×0.48). Particle colours keep
-    /// their Vibrant/Mid/Dominant roles blended 40% toward Base,
-    /// so a cover whose vibrant accent is a contrasting hue
-    /// cannot turn the card into a rainbow.
+    /// background wears the artwork's MAIN colour — the colour
+    /// a viewer would name for the cover — LIGHTER under the
+    /// light theme (lerped toward white — Base 0.72, Deep
+    /// 0.60, Lift 0.86) and DARKER under the dark theme
+    /// (scaled — Base ×0.30, Deep ×0.20, Lift ×0.48). Particle
+    /// colours keep their Vibrant/Mid/Dominant roles blended
+    /// 40% toward Base, so a cover whose vibrant accent is a
+    /// contrasting hue cannot turn the card into a rainbow.
     ///
-    /// Two tunings from the rendered proofs (out29/out30, then
-    /// out31, 2026-10-08), one root: colours straying from the
-    /// Dominant family. (1) The BLOBS used to be the roles at 60%
-    /// strength; the Mid-role blob is a wide, slow wash, and on
-    /// the plum cover it dragged the open background ~40° of hue
-    /// away from the cover's dominant (289.8° measured vs 330.4°)
-    /// in both themes. The 25% admixture cap tried next still
-    /// failed the out31 re-proof (dark band 292.8°, light band
-    /// effectively neutral): on this poster both roles are
-    /// blue-heavy, and the blob alphas are high exactly where
-    /// the band is sampled. The blobs are now the ramp itself —
-    /// BlobA IS Lift, BlobB IS Deep, zero admixture — so every
-    /// background pixel is a blend of same-hue colours and the
-    /// field cannot leave the dominant's hue. Mid/Vibrant
-    /// survive only where they belong: the particles and the
-    /// glow. The light mixes also carry less white than before
-    /// (Base 0.80 → 0.72, Deep 0.68 → 0.60, Lift 0.90 → 0.86):
-    /// at 0.80 the plum Base read as neutral grey (band sat
-    /// 0.029); at 0.72 its relative luminance is still 0.755,
-    /// so dark text stays legible while the tint keeps its
-    /// chroma. (2) The GLOW was the tempered Vibrant, which on
-    /// dark covers lands at nearly the background's own value —
-    /// a halo no lighter than its surround is invisible (ring
-    /// Δ 0.008 measured). The glow is the Vibrant lightened
-    /// toward white BEFORE the 40% Base blend — 35% since
-    /// out31, where the breath peak measured 0.039–0.048
-    /// against a ≳0.05 signature — so the halo is lighter than
-    /// the card it rings by construction.
+    /// "Main colour" is the palette's Mid role — the pixel
+    /// mean tempered halfway toward Dominant — NOT Dominant
+    /// itself. Dominant is an area mode: on a busy poster the
+    /// fullest single bin is the background wash, while the
+    /// subject a human names fragments across bins. The hue
+    /// diagnosis (winmega-qa/hue-diag/DIAGNOSIS.md,
+    /// 2026-10-08) settled it on both proof covers. Phata
+    /// Patakha: Dominant (38,24,41), hue 289°, is the dark
+    /// violet stage — one flat colour, 8.9% of pixels — while
+    /// Mid (63,42,53), hue 328.6°, is the plum-red subject
+    /// everyone calls the cover's colour. Choozay: Dominant
+    /// is near-black (6,5,5 — hue undefined), while Mid
+    /// (43,34,23), hue 33–36°, matches the panel reading
+    /// measured from the original build (36.2°). Do not
+    /// "fix" the anchor back to Dominant: the extractor and
+    /// the panel were faithful all along — the retune rounds
+    /// aimed at the plumbing changed nothing because the
+    /// disagreement was definitional.
+    ///
+    /// The blobs are the ramp itself — BlobA IS Lift, BlobB
+    /// IS Deep, zero admixture of the palette roles — so
+    /// every background pixel is a blend of same-hue colours
+    /// and the field cannot leave the anchor's hue; the
+    /// roles survive only where they belong: the particles
+    /// and the glow. The light mixes carry the white they do
+    /// because the tint doubles as the legibility mechanism:
+    /// at Base 0.80 the tint read as neutral grey; at 0.72
+    /// it keeps its chroma while staying light enough for
+    /// theme-dark text. The GLOW is the Vibrant lightened
+    /// toward white (0.35) BEFORE the 40% Base blend: the
+    /// unlightened tempered Vibrant lands at nearly the
+    /// background's own value on dark covers — a halo no
+    /// lighter than its surround is invisible (ring Δ 0.008
+    /// measured) — so the lightening is what makes the halo
+    /// lighter than the card it rings by construction.
     /// </summary>
     private FxColorFamily ComputeFamily(ArtworkPalette palette)
     {
-        Color dominant = palette.Dominant;
+        Color anchor = palette.Mid;
         Color baseColor;
         Color deep;
         Color lift;
         if (ActualTheme == ElementTheme.Light)
         {
-            baseColor = LerpColor(dominant, White, 0.72f);
-            deep = LerpColor(dominant, White, 0.60f);
-            lift = LerpColor(dominant, White, 0.86f);
+            baseColor = LerpColor(anchor, White, 0.72f);
+            deep = LerpColor(anchor, White, 0.60f);
+            lift = LerpColor(anchor, White, 0.86f);
         }
         else
         {
-            baseColor = ScaleColor(dominant, 0.30f);
-            deep = ScaleColor(dominant, 0.20f);
-            lift = ScaleColor(dominant, 0.48f);
+            baseColor = ScaleColor(anchor, 0.30f);
+            deep = ScaleColor(anchor, 0.20f);
+            lift = ScaleColor(anchor, 0.48f);
         }
 
         return new FxColorFamily(
